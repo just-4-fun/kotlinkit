@@ -33,7 +33,7 @@ object TestTask {
 	val okExecutor = Executors.newCachedThreadPool()!!
 	val badExecutor = Executors.newCachedThreadPool().apply { shutdownNow() }!!
 	var finish = false
-	val caughtCancels= AtomicInteger()
+	val caughtCancels = AtomicInteger()
 	
 	/**/
 	
@@ -94,7 +94,7 @@ object TestTask {
 	fun addPromise(token: Token) = synchronized(lock) { promises.add(token);logL(1, "CALL +", "$token;   proms= ${promisesPrn}") }
 	fun removePromise(token: Token, res: Result<*>) = synchronized(lock) {
 		promises.remove(token)
-		val msg = if (res is Result.Failure) res.exception::class.simpleName else "Ok"
+		val msg = res.failure?.let { it::class.simpleName } ?: "Ok"
 		logL(1, "CALL --", "$token;   $msg;   proms= ${promisesPrn}")
 	}
 	

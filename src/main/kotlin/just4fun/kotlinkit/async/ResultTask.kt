@@ -71,5 +71,5 @@ class FailedAsyncResult<T>(val exception: Throwable): AsyncResult<T> {
 	override val isComplete = true
 	override fun cancel(value: T, interrupt: Boolean) = Unit
 	override fun cancel(cause: Throwable, interrupt: Boolean) = Unit
-	override fun onComplete(executor: Executor?, precede: Boolean, reaction: (Result<T>) -> Unit) = apply { reaction(Result.Failure(exception)) }
+	override fun onComplete(executor: Executor?, precede: Boolean, reaction: (Result<T>) -> Unit) = apply { reaction(Result(exception)) }
 }

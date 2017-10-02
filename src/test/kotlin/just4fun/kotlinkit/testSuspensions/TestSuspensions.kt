@@ -165,11 +165,11 @@ fun suspended2(executor: Executor, cancel0: Long = -1, cancel1: Int = 0, cancel2
 	op.onComplete { res ->
 		logL(1, " 0 ", "X: Result= $res")
 		if (cancel0 == 600L && cancel1 > 0 && cancel2 > 0 && par1 > 0 && par2 > 0) {
-			if (res.valueOrNull != 0) logL(1, "Exception -----------------------------------------------------------------------", "Result should be 0  VS   ${res.valueOrNull}")
-		} else if (cancel0 >= 0 && !res.isFailure) logL(1, "Exception -----------------------------------------------------------------------", "Result should be Failure")
-		else if (cancel0 < 0 && ((cancel1 > 0 && cancel2 == 0) || (cancel2 > 0 && cancel1 == 0)) && res.valueOrNull != 1) logL(1, "Exception -----------------------------------------------------------------------", "Result should be 1  VS   ${res.valueOrNull} ")
-		else if (cancel0 < 0 && cancel1 > 0 && cancel2 > 0 && res.valueOrNull != 0) logL(1, "Exception -----------------------------------------------------------------------", "Result should be 0  VS   ${res.valueOrNull}")
-		else if (cancel0 < 0 && cancel1 == 0 && cancel2 == 0 && res.valueOrNull != 2) logL(1, "Exception -----------------------------------------------------------------------", "Result should be 2  VS   ${res.valueOrNull}")
+			if (res.value != 0) logL(1, "Exception -----------------------------------------------------------------------", "Result should be 0  VS   ${res.value}")
+		} else if (cancel0 >= 0 && res.failure == null) logL(1, "Exception -----------------------------------------------------------------------", "Result should be Failure")
+		else if (cancel0 < 0 && ((cancel1 > 0 && cancel2 == 0) || (cancel2 > 0 && cancel1 == 0)) && res.value != 1) logL(1, "Exception -----------------------------------------------------------------------", "Result should be 1  VS   ${res.value} ")
+		else if (cancel0 < 0 && cancel1 > 0 && cancel2 > 0 && res.value != 0) logL(1, "Exception -----------------------------------------------------------------------", "Result should be 0  VS   ${res.value}")
+		else if (cancel0 < 0 && cancel1 == 0 && cancel2 == 0 && res.value != 2) logL(1, "Exception -----------------------------------------------------------------------", "Result should be 2  VS   ${res.value}")
 	}
 }
 
@@ -209,9 +209,9 @@ fun suspended3(executor: Executor, cancel0: Long = -1, cancel1: Int = 0, cancel2
 	}
 	op.onComplete { res ->
 		logL(1, " 0 ", "X: Result= $res")
-		if (cancel2 > 0 && cancel3 > 0 && res.valueOrNull != 1) logL(1, "Exception -----------------------------------------------------------------------", "Result should be 1  VS   ${res.valueOrNull}")
-		else if (cancel2 == 0 && cancel3 == 0 && res.valueOrNull != 3) logL(1, "Exception -----------------------------------------------------------------------", "Result should be 3  VS   ${res.valueOrNull}")
-		else if (((cancel2 > 0 && cancel3 == 0) || (cancel2 == 0 && cancel3 > 0)) && res.valueOrNull != 2) logL(1, "Exception -----------------------------------------------------------------------", "Result should be 2  VS   ${res.valueOrNull}")
+		if (cancel2 > 0 && cancel3 > 0 && res.value != 1) logL(1, "Exception -----------------------------------------------------------------------", "Result should be 1  VS   ${res.value}")
+		else if (cancel2 == 0 && cancel3 == 0 && res.value != 3) logL(1, "Exception -----------------------------------------------------------------------", "Result should be 3  VS   ${res.value}")
+		else if (((cancel2 > 0 && cancel3 == 0) || (cancel2 == 0 && cancel3 > 0)) && res.value != 2) logL(1, "Exception -----------------------------------------------------------------------", "Result should be 2  VS   ${res.value}")
 	}
 }
 

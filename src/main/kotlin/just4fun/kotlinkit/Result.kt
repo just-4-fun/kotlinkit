@@ -2,119 +2,95 @@
 
 package just4fun.kotlinkit
 
-
-/* Utils */
-
 @Suppress("UNCHECKED_CAST")
-fun <T> Result<Result<T>>.flatten(): Result<T> = when (this) {
-	is Result.Success -> value
-	is Result.Failure -> this as Result.Failure<T>
-}
-
-
-/* Result*/
-
-/** Subclasses [Success] and [Failure] represent result of some method.*/
-sealed class Result<T> {
+class Result<T> @PublishedApi internal constructor(val value: T?, val failure: Throwable?, val hasValue: Boolean) {
 	
-	companion object {
-		/** Tries to execute the [code] and returns [Success] or [Failure].*/
-		operator fun <T> invoke(code: () -> T): Result<T> {
-			return try {
-				Success(code())
-			} catch (x: Throwable) {
-				Failure(x)
-			}
-		}
+	val hasFailure: Boolean get()= failure != null
+	
+	/** Returns [Value.value] or throws [Failure.failure].*/
+	val valueOrThrow: T get() = if (hasValue) value as T else throw failure ?: URE
+	
+	/** Returns either [Value.value] or [altValue] if the result is [Failure].*/
+	fun valueOr(altValue: T): T = if (hasValue) value as T else altValue
+	
+	/** Returns either [Value.value] or a result of the [altValueFun]. call.*/
+	inline fun valueOr(altValueFun: (Throwable) -> T): T = if (hasValue) value as T else altValueFun(failure ?: URE)
+	
+	/** If [Value] returns new [Value] of value calculated by [altValueFun], otherwise just returns the same [Failure].*/
+	inline fun <V> valueAs(altValueFun: (original: T) -> V): Result<V> =
+	  if (hasValue) Result(altValueFun(value as T)) else this as Result<V>
+	
+	/** Executes [code] if it's [Value] and returns 'null'. Returns failure otherwise.*/
+	inline fun ifValue(code: (T) -> Unit): Throwable? {
+		if (hasValue) code(value as T)
+		return failure
 	}
 	
-	val xxx: Int = 0
-	
-	/** Returns true if [Success].*/
-	abstract val isSuccess: Boolean
-	
-	/** Returns true if [Failure].*/
-	abstract val isFailure: Boolean
-	
-	/** Returns [Success.value] or throws [Failure.exception].*/
-	abstract val valueOrThrow: T
-	
-	/** Returns either [Success.value] or null if the result is [Failure]. If the [T] is nullable type returning null is ambiguous. */
-	abstract val valueOrNull: T?
-	
-	/** Returns either [Success.value] or [altValue] if the result is [Failure].*/
-	abstract fun valueOr(altValue: T): T
-	
-	/** Returns either [Success.value] or a result of the [altValueFun]. call.*/
-	inline fun valueOr(altValueFun: (Throwable) -> T): T = (this as? Success)?.value ?: altValueFun((this as Failure).exception)
-	
-	/** Returns either [Failure.exception] or null if the result is [Success].*/
-	abstract val exceptionOrNull: Throwable?
-	
-	/** If [Failure] wraps its exception as a cause and returns new [Failure] otherwise just returns the same [Success].*/
-	inline fun exceptionAs(wrapper: (original: Throwable) -> Throwable): Result<T> =
-	  if (this is Failure) Failure<T>(wrapper(exception).apply { if (cause == null) initCause(exception) }) else this
-	
-	/** Executes [code] if it's [Success]. Returns itself so as to allow call chaining.*/
-	inline fun ifSuccess(code: (T) -> Unit): Result<T> {
-		if (this is Success) code(value)
+	/** Executes [code] if it's [Value]. Returns itself so as to allow call chaining.*/
+	inline fun onValue(code: (T) -> Unit): Result<T> {
+		if (hasValue) code(value as T)
 		return this
 	}
 	
+	/** If [Failure] wraps its failure as a cause and returns new [Failure], otherwise just returns the same [Value].*/
+	inline fun failureAs(wrapper: (original: Throwable) -> Throwable): Result<T> =
+	  failure?.let { Result<T>(wrapper(it).apply { if (cause == null) initCause(it) }) } ?: this
+	
+	/** Executes [code] if it's [Failure] and returns 'null'. Returns value otherwise.*/
+	inline fun ifFailure(code: (Throwable) -> Unit): T? {
+		failure?.let { code(it) }
+		return value
+	}
+	
 	/** Executes [code] if it's [Failure]. Returns itself so as to allow call chaining.*/
-	inline fun ifFailure(code: (Throwable) -> Unit): Result<T> {
-		if (this is Failure) code(exception)
+	inline fun onFailure(code: (Throwable) -> Unit): Result<T> {
+		failure?.let { code(it) }
 		return this
 	}
 	
 	/**@see [valueOrNull]*/
-	abstract operator fun component1(): T?
+	operator fun component1(): T? = value
 	
-	/**@see [exceptionOrNull]*/
-	abstract operator fun component2(): Throwable?
+	/**@see [failureOrNull]*/
+	operator fun component2(): Throwable? = failure
+	
+	override fun toString(): String = "Result(${if (hasValue) value else failure})"
+	override fun hashCode(): Int = value?.hashCode() ?: failure?.hashCode() ?: 0
+	override fun equals(other: Any?) = this === other ||
+	  (other is Result<*> && (other.failure == failure && other.value == value))
 	
 	
-	/*Success*/
 	
-	/** Represents successful result.
-	
-	@property[value] An actual resulting value: [T].
-	 */
-	class Success<T>(val value: T): Result<T>() {
+	/** */
+	companion object {
+		@PublishedApi internal val URE get() = UninitializedResultException()
 		
-		override val isSuccess get() = true
-		override val isFailure get() = false
-		override val valueOrThrow: T get() = value
-		override val valueOrNull: T? get() = value
-		override fun valueOr(altValue: T): T = value
-		override val exceptionOrNull: Throwable? get() = null
-		override fun component1(): T? = value
-		override fun component2(): Throwable? = null
-		override fun toString(): String = "Success($value)"
-		override fun hashCode(): Int = value?.hashCode() ?: 0
-		override fun equals(other: Any?) = this === other || (other is Success<*> && other.value == value)
-	}
-	
-	
-	/*Failure*/
-	
-	/** Represents failed result.
-	
-	@property[exception] An exception the result's failed with.
-	 */
-	class Failure<T>(val exception: Throwable): Result<T>() {
-		constructor(message: String? = null): this(if (message == null) Exception() else Exception(message))
+		/** */
+		operator fun <T> invoke(value: T): Result<T> = Result(value, null, true)
 		
-		override val isSuccess get() = false
-		override val isFailure get() = true
-		override val valueOrThrow: T get() = throw exception
-		override val valueOrNull: T? get() = null
-		override fun valueOr(altValue: T): T = altValue
-		override val exceptionOrNull: Throwable? get() = exception
-		override fun component1(): T? = null
-		override fun component2(): Throwable? = exception
-		override fun toString(): String = "Failure($exception)"
-		override fun hashCode(): Int = exception.hashCode()
-		override fun equals(other: Any?) = this === other || (other is Failure<*> && other.exception == exception)
+		/** */
+		operator fun <T> invoke(value: T, failure: Throwable): Result<T> = Result(value, failure, true)
+		
+		/** */
+		operator fun <T> invoke(failure: Throwable): Result<T> = Result(null, failure, false)
+		
+		/** */
+		operator inline fun <T> invoke(code: () -> T): Result<T> {
+			return try {
+				Result(code())
+			} catch (x: Throwable) {
+				Result(x)
+			}
+		}
 	}
 }
+
+
+
+/** */
+@Suppress("UNCHECKED_CAST")
+fun <T> Result<Result<T>>.flatten(): Result<T> = value ?: this as Result<T>
+
+
+/** */
+class UninitializedResultException: Exception()

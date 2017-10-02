@@ -40,8 +40,8 @@ open class AsyncTask<T>(val delayMs: Int = 0, val executor: Executor? = null, va
 		}
 	}
 	
-	override fun cancel(value: T, interrupt: Boolean): Unit = complete(Result.Success(value), true, interrupt)
-	override fun cancel(cause: Throwable, interrupt: Boolean) = complete(Result.Failure(cause), true, interrupt)
+	override fun cancel(value: T, interrupt: Boolean): Unit = complete(Result(value), true, interrupt)
+	override fun cancel(cause: Throwable, interrupt: Boolean) = complete(Result(cause), true, interrupt)
 	
 	override fun run() {
 		if (runNow) run { runNow(); return }
@@ -50,7 +50,7 @@ open class AsyncTask<T>(val delayMs: Int = 0, val executor: Executor? = null, va
 			runNow = true
 			executor!!.execute(this)
 		} catch (x: Throwable) {
-			complete(Result.Failure<T>(x), false, false)
+			complete(Result<T>(x), false, false)
 		}
 	}
 	
@@ -58,9 +58,9 @@ open class AsyncTask<T>(val delayMs: Int = 0, val executor: Executor? = null, va
 		synchronized(lock) { if (state > INITED) return else state = RUNNING }
 		thread = Thread.currentThread()
 		val res = try {
-			Result.Success(code(this))
+			Result(code(this))
 		} catch (x: Throwable) {
-			Result.Failure<T>(x)
+			Result<T>(x)
 		}
 		thread = null
 		complete(res, false, false)

@@ -71,7 +71,7 @@
 //
 //	final override fun cancel(cause: Throwable, interrupt: Boolean) = complete(Result.Failure(cause), true, interrupt)
 //	final override fun resume(value: T) = complete(Result.Success(value), false, false)
-//	final override fun resumeWithException(exception: Throwable) = complete(Result.Failure(exception), false, false)
+//	final override fun resumeWithException(failure: Throwable) = complete(Result.Failure(failure), false, false)
 //
 //	private fun complete(res: Result<T>, cancelled: Boolean, interrupt: Boolean) {
 //		synchronized(tracker) {
@@ -81,7 +81,7 @@
 //			state = if (cancelled) CANCELLED else EXECUTED
 //			result = res
 //		}
-//		if (cancelled) child?.cancel(res.exceptionOrNull!!, interrupt)
+//		if (cancelled) child?.cancel(res.failureOrNull!!, interrupt)
 //		if (reaction != null) Safely { reaction!!.invoke(result!!) }
 //		onComplete(res)
 //		// doesn't resume right away if wasn't intercepted to other thread. Should wait actual resume..
@@ -157,10 +157,10 @@
 //			continuation.resume(value)
 //		}
 //
-//		override fun resumeWithException(exception: Throwable) {
+//		override fun resumeWithException(failure: Throwable) {
 //			if (current === active && !active.isComplete) thread = Thread.currentThread()
-//			//			log(1, active, "!!!  this shouldn't happen: $exception    active? ${current == active}");
-//			continuation.resumeWithException(exception)
+//			//			log(1, active, "!!!  this shouldn't happen: $failure    active? ${current == active}");
+//			continuation.resumeWithException(failure)
 //		}
 //	}
 //}

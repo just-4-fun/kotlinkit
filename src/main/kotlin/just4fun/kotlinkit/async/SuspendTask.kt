@@ -44,7 +44,7 @@ open class SuspendTask<T>: ResultTask<T>(), Continuation<T> {
 		}
 		if (option == 0) Unit
 		else if (option == 1) cancel()
-		else cont.resume(Result.Failure(IllegalStateException("The task can be pre-started once.")))
+		else cont.resume(Result(IllegalStateException("The task can be pre-started once.")))
 	}
 	
 	suspend /*inline*/ fun <S: SuspendTask<T>> preStartSuspended(context: CoroutineContext?, /*crossinline*/ code: (self: S) -> Unit): Result<T> = suspendCoroutine { cont ->
@@ -53,7 +53,7 @@ open class SuspendTask<T>: ResultTask<T>(), Continuation<T> {
 		}
 		if (option == 0) Safely({ code(this as S) }, { cancel() })
 		else if (option == 1) cancel()
-		else cont.resume(Result.Failure(IllegalStateException("The task can be pre-started once.")))
+		else cont.resume(Result(IllegalStateException("The task can be pre-started once.")))
 	}
 	
 	suspend fun startSuspended(context: CoroutineContext?, code: suspend TaskContext.() -> T): Result<T> = startSuspended(this, context, code)
@@ -65,7 +65,7 @@ open class SuspendTask<T>: ResultTask<T>(), Continuation<T> {
 			}
 			if (option == 0) execute(receiver, code)
 			else if (option == 1) cancel()
-			else cont.resume(Result.Failure(IllegalStateException("The task can be pre-started once.")))
+			else cont.resume(Result(IllegalStateException("The task can be pre-started once.")))
 		}
 	}
 	
@@ -115,10 +115,10 @@ open class SuspendTask<T>: ResultTask<T>(), Continuation<T> {
 		return this
 	}
 	
-	final override fun cancel(value: T, interrupt: Boolean): Unit = complete(Result.Success(value), true, interrupt)
-	final override fun cancel(cause: Throwable, interrupt: Boolean) = complete(Result.Failure(cause), true, interrupt)
-	final override fun resume(value: T) = complete(Result.Success(value), false, false)
-	final override fun resumeWithException(exception: Throwable) = complete(Result.Failure(exception), false, false)
+	final override fun cancel(value: T, interrupt: Boolean): Unit = complete(Result(value), true, interrupt)
+	final override fun cancel(cause: Throwable, interrupt: Boolean) = complete(Result(cause), true, interrupt)
+	final override fun resume(value: T) = complete(Result(value), false, false)
+	final override fun resumeWithException(exception: Throwable) = complete(Result(exception), false, false)
 	
 	private fun complete(res: Result<T>, cancelled: Boolean, interrupt: Boolean) {
 		synchronized(lock) {
@@ -136,7 +136,7 @@ open class SuspendTask<T>: ResultTask<T>(), Continuation<T> {
 			state = if (cancelled) CANCELLED else EXECUTED
 			result = res
 		}
-		if (cancelled) child?.cancel(res.exceptionOrNull!!, interrupt)
+		if (cancelled) child?.cancel(res.failure!!, interrupt)
 		if (reaction != null) Safely { reaction!!.invoke(res) }
 		onComplete(res)
 		// doesn't resume right away if wasn't intercepted to other thread. Should wait actual resume..

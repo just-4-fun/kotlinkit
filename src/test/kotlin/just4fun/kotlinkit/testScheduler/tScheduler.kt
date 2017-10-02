@@ -96,7 +96,7 @@ object TestScheduler {
 		val token = Token(id.toLong())
 		addPromise(token)
 		task.onComplete {
-			logL(1, "COMPLETE $SessionID", "$id;    ${if (it is Result.Failure) it.exception::class.simpleName else "Ok"}")
+			logL(1, "COMPLETE $SessionID", "$id;    ${it.failure?.let { it::class.simpleName } ?: "Ok"}")
 			removePromise(token, it)
 		}
 		return task

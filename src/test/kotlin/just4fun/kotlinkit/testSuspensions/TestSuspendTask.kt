@@ -42,7 +42,7 @@ fun test() {
 	val task = STask(cfg)
 	task.run().onComplete {
 		val total = task.config.total
-		logL(2, task, "RESULT= ${(it as? Result.Success)?.value ?: it.exceptionOrNull!!.prn()}    from $total")
+		logL(2, task, "RESULT= ${it.failure?.prn() ?: it.value}    from $total")
 		Thread.sleep(600)
 		val expect = task.config.result()
 		if (expect != it.valueOr(0)) {
@@ -97,7 +97,7 @@ class STask(val config: Config): SuspendTask<Int>() {
 			//
 			val task = STask(child)
 			val res = Safely { task.runSuspended() }
-			logL(2, task, "Res= ${(res as? Result.Success)?.value ?: res?.exceptionOrNull?.prn() ?: "see red message !!!"}")
+			logL(2, task, "Res= ${res?.failure?.prn() ?: res?.value ?: "see red message !!!"}")
 			//			checkInterrupted(task)
 			config.checkIntercept(child)
 			//
