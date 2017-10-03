@@ -72,10 +72,18 @@ fun <T> measureTime(tag: String = "", times: Int = 1, warmup: Boolean = true, an
 	println("$tag ::  $times times;  ${t / 1000000} ms;  $t ns;  ${t / times} ns/call")
 	totalNs += t
 	totalN++
+	if (maxN < t1) maxN = t1
+	if (minN > t1) minN = t1
 	return result
 }
 
 private var totalNs = 0L
 private var totalN = 0
+private var maxN = 0L
+private var minN = Long.MAX_VALUE
 
 val measuredTimeAvg get() = if (totalN == 0) 0 else totalNs / totalN
+
+fun measuredStats() {
+	println("calls= $totalN;  min= $minN;  max= $maxN;  avg= $measuredTimeAvg")
+}

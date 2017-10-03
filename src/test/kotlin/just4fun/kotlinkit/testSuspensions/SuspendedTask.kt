@@ -71,7 +71,7 @@
 //
 //	final override fun cancel(cause: Throwable, interrupt: Boolean) = complete(Result.Failure(cause), true, interrupt)
 //	final override fun resume(value: T) = complete(Result.Success(value), false, false)
-//	final override fun resumeWithException(failure: Throwable) = complete(Result.Failure(failure), false, false)
+//	final override fun resumeWithException(exception: Throwable) = complete(Result.Failure(exception), false, false)
 //
 //	private fun complete(res: Result<T>, cancelled: Boolean, interrupt: Boolean) {
 //		synchronized(tracker) {
@@ -157,10 +157,10 @@
 //			continuation.resume(value)
 //		}
 //
-//		override fun resumeWithException(failure: Throwable) {
+//		override fun resumeWithException(exception: Throwable) {
 //			if (current === active && !active.isComplete) thread = Thread.currentThread()
-//			//			log(1, active, "!!!  this shouldn't happen: $failure    active? ${current == active}");
-//			continuation.resumeWithException(failure)
+//			//			log(1, active, "!!!  this shouldn't happen: $exception    active? ${current == active}");
+//			continuation.resumeWithException(exception)
 //		}
 //	}
 //}

@@ -136,7 +136,7 @@ open class SuspendTask<T>: ResultTask<T>(), Continuation<T> {
 			state = if (cancelled) CANCELLED else EXECUTED
 			result = res
 		}
-		if (cancelled) child?.cancel(res.failure!!, interrupt)
+		if (cancelled) child?.cancel(res.exception!!, interrupt)
 		if (reaction != null) Safely { reaction!!.invoke(res) }
 		onComplete(res)
 		// doesn't resume right away if wasn't intercepted to other thread. Should wait actual resume..

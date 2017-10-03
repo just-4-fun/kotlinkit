@@ -4,90 +4,69 @@ package just4fun.kotlinkit
 
 
 /**
- * Holds the result of some method invocation which possible outcomes are:
- * - Failure: [failure] is assigned with exception occurred; [value] is 'null'.
- * - Success: [value] is assigned with value of [T]; [failure] is 'null'.
- * - Success with some issue: [value] is assigned with value of [T] while [failure] is assigned with issue occurred.
+ * Presents the result of some method call as a success or failure. A successful result has its [value] set while a failure has its [exception] set.
  *
- * Both [value] and [failure] can not be 'null'.
- *
- * @param [value] - the value of successful the invocation.
- * @param [failure] - indicates a problem occurred during the invocation. Can be critical error (no [value] is set) as well as some issue along with the [value] set.
+ * @param [value] - a value of a successful call.
+ * @param [exception] - an exception of a failed call.
  */
 
 @Suppress("UNCHECKED_CAST")
-class Result<T> @PublishedApi internal constructor(val value: T?, val failure: Throwable?, val hasValue: Boolean) {
+class Result<T> @PublishedApi internal constructor(val value: T?, val exception: Throwable?, success: Boolean) {
 	
-	/** Indicates that [failure] is set. */
-	val hasFailure: Boolean get()= failure != null
+	/** Indicates of successful result. */
+	val isSuccess: Boolean = success
 	
-	/** Returns [value] if set, or throws [failure].*/
-	val valueOrThrow: T get() = if (hasValue) value as T else throw failure as Throwable
+	/** Indicates of failed result. */
+	val isFailure: Boolean get() = !isSuccess
 	
-	/** Returns either [value] or [altValue] if the [value] isn't set.*/
-	fun valueOr(altValue: T): T = if (hasValue) value as T else altValue
+	/** Returns [value] in case of a success, otherwise throws [exception].*/
+	val valueOrThrow: T get() = if (isSuccess) value as T else throw exception as Throwable
 	
-	/** Returns either [value] or a result of the [altValueFun] call if the [value] isn't set.*/
-	inline fun valueOr(altValueFun: (Throwable) -> T): T = if (hasValue) value as T else altValueFun(failure  as Throwable)
+	/** Returns [value] in case of a success, otherwise [altValue].*/
+	fun valueOr(altValue: T): T = if (isSuccess) value as T else altValue
 	
-	/** If [value] is set creates new [Result] assigned with new value from transformation of original value by [altValueFun]  and returns it. Otherwise returns this.*/
-	inline fun <V> valueAs(altValueFun: (original: T) -> V): Result<V> =
-	  if (hasValue) Result(altValueFun(value as T)) else this as Result<V>
+	/** Returns [value] in case of a success, otherwise a result of the [altFun] call.*/
+	inline fun valueOr(altFun: (Throwable) -> T): T = if (isSuccess) value as T else altFun(exception as Throwable)
 	
-	/** If [value] is set executes [code] with it as argument. Returns [failure]. */
-	inline fun ifValue(code: (T) -> Unit): Throwable? {
-		if (hasValue) code(value as T)
-		return failure
-	}
-	
-	/** If [value] is set executes [code] with it as argument. Returns this. */
-	inline fun onValue(code: (T) -> Unit): Result<T> {
-		if (hasValue) code(value as T)
+	/** Executes [code] with [value] as the argument in case of a success. Returns this result. */
+	inline fun onSuccess(code: (T) -> Unit): Result<T> {
+		if (isSuccess) code(value as T)
 		return this
 	}
 	
-	/** If [failure] is set creates new [Result] assigned with new failure from transformation of original one by [altFailureFun] and returns it. Otherwise returns this.*/
-	inline fun failureAs(altFailureFun: (original: Throwable) -> Throwable): Result<T> =
-	  failure?.let { Result<T>(altFailureFun(it).apply { if (cause == null) initCause(it) }) } ?: this
-	
-	/** If [failure] is set executes [code] with it as argument. Returns [value]. */
-	inline fun ifFailure(code: (Throwable) -> Unit): T? {
-		failure?.let { code(it) }
-		return value
-	}
-	
-	/** Executes [code] if it's [Failure]. Returns itself so as to allow call chaining.*/
-	/** If [failure] is set executes [code] with it as argument. Returns this. */
+	/** Executes [code] with [exception] as the argument in case of a failure. Returns this result. */
 	inline fun onFailure(code: (Throwable) -> Unit): Result<T> {
-		failure?.let { code(it) }
+		if (!isSuccess) code(exception as Throwable)
 		return this
 	}
+	
+	/** Returns a result of the execution of [code] with [value] as the argument in case of a success. Otherwise returns 'null'. */
+	inline fun <R> ifSuccess(code: (T) -> R): R? = if (isSuccess) code(value as T) else null
+	
+	/** Returns a result of the execution of [code] with [exception] as the argument in case of a failure. Otherwise returns 'null'. */
+	inline fun <R> ifFailure(code: (Throwable) -> R): R? = if (isSuccess) null else code(exception as Throwable)
 	
 	/** Returns [value]. Serves destructuring purpose. */
 	operator fun component1(): T? = value
 	
-	/** Returns [failure]. Serves destructuring purpose. */
-	operator fun component2(): Throwable? = failure
+	/** Returns [exception]. Serves destructuring purpose. */
+	operator fun component2(): Throwable? = exception
 	
-	override fun toString(): String = "Result(${if (hasValue) value else failure})"
-	override fun hashCode(): Int = value?.hashCode() ?: failure?.hashCode() ?: 0
-	override fun equals(other: Any?) = this === other ||
-	  (other is Result<*> && (other.failure == failure && other.value == value))
-	
+	override fun toString(): String = "Result(${if (isSuccess) value else exception})"
+	override fun hashCode(): Int = value?.hashCode() ?: exception?.hashCode() ?: 0
+	override fun equals(other: Any?) = this === other || (other is Result<*> && other.exception == exception && other.value == value)
 	
 	
-	/** Companion object provides construction functions.*/
+	
+	/** Companion object provides [Result] construction.*/
 	companion object {
-		/** Creates [Result] with successful [value] of [T]*/
+		/** Creates a successful [Result] with [value]*/
 		operator fun <T> invoke(value: T): Result<T> = Result(value, null, true)
 		
-		/** Creates [Result] with successful [value] of [T] and an non-critical [failure] occurred during invocation. */
-		operator fun <T> invoke(value: T, failure: Throwable): Result<T> = Result(value, failure, true)
+		/** Creates a failed [Result] with [exception].*/
+		operator fun <T> invoke(exception: Throwable): Result<T> = Result(null, exception, false)
 		
-		/** Creates [Result] with critical [failure].*/
-		operator fun <T> invoke(failure: Throwable): Result<T> = Result(null, failure, false)
-		
-		/** Executes [code] and returns [Result] with [value] in case of a success and [Result] with [failure] in case an exception was thrown during [code] execution. */
+		/** Executes [code] in a try/catch block and returns a failed [Result] if an [exception] was thrown, otherwise returns successful [Result] with [value] */
 		operator inline fun <T> invoke(code: () -> T): Result<T> {
 			return try {
 				Result(code())

@@ -94,7 +94,7 @@ object TestTask {
 	fun addPromise(token: Token) = synchronized(lock) { promises.add(token);logL(1, "CALL +", "$token;   proms= ${promisesPrn}") }
 	fun removePromise(token: Token, res: Result<*>) = synchronized(lock) {
 		promises.remove(token)
-		val msg = res.failure?.let { it::class.simpleName } ?: "Ok"
+		val msg = res.exception?.let { it::class.simpleName } ?: "Ok"
 		logL(1, "CALL --", "$token;   $msg;   proms= ${promisesPrn}")
 	}
 	

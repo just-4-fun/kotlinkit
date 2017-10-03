@@ -7,18 +7,25 @@ import just4fun.kotlinkit.*
 fun main(a: Array<String>) {
 	t1;t1;t1;t1;t1;t1;t1;t1;t1;t1;
 //	t2;t2;t2;t2;t2;t2;t2;t2;t2;t2;
-	println("avg= $measuredTimeAvg ns")
+	measuredStats()
+	fun test1(v: String?) = v
+	fun test2(v: String) = v
+	val res1 = Result(test1(null))
+	res1.valueOr(null)?.length
+	val res2 = Result { test2("") }
+	res2.valueOr("").length
 	
-//	fun run(v: String?) = v
-//	val res = Result.Value(run(null))
-//	println("${res.value!!}")
+	val res = Result{ 10 / 0}
+	val tres = res.transformFailure { Exception("oops") }
+	println("${tres.isSuccess}")
 }
 
 
 
-val t1 get() = measureTime("Res", 1) {
-	val v : Result<Int> = Result(1)
-//	v.valueOrThrow
-	v.valueOr { 11 }
-}
+val t1
+	get() = measureTime("Res", 1) {
+		val v: Result<Int> = Result(1)
+	v.valueOrThrow
+//		v.valueOr { 11 }
+	}
 
