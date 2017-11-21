@@ -2,29 +2,44 @@ package just4fun.kotlinkit.async
 
 import just4fun.kotlinkit.async.ResultTaskState.CANCELLED
 import just4fun.kotlinkit.async.ResultTaskState.RUNNING
+import just4fun.kotlinkit.async.ResultTaskState.EXECUTED
 import just4fun.kotlinkit.Result
 import just4fun.kotlinkit.Safely
 import java.util.concurrent.CancellationException
 import java.util.concurrent.Executor
+import kotlin.concurrent.thread
 
 
-typealias Reaction<T> = (Result<T>) -> Unit
-
-
-interface AsyncResult<T>: TaskContext {
-	val isComplete: Boolean
-	fun onComplete(executor: Executor? = null, precede: Boolean = false, reaction: (Result<T>) -> Unit): AsyncResult<T>
-	fun cancel(cause: Throwable = CancellationException(), interrupt: Boolean = false): Unit
-	fun cancel(value: T, interrupt: Boolean = false): Unit
-}
-
+/* AsyncResult */
 
 interface TaskContext {
 	val isCancelled: Boolean
 }
 
 
-enum class ResultTaskState {CREATED, INITED, RUNNING, CANCELLED, EXECUTED }
+interface AsyncResult<T>: TaskContext {
+	val isComplete: Boolean
+	fun onComplete(executor: Executor? = null, precede: Boolean = false, reaction: (Result<T>) -> Unit): AsyncResult<T>
+	fun cancel(cause: Throwable = CancellationException(), interrupt: Boolean = false) = Unit
+	fun cancel(value: T, interrupt: Boolean = false) = Unit
+}
+
+
+
+class ReadyAsyncResult<T>(private val result: Result<T>): AsyncResult<T> {
+	override val isCancelled = false
+	override val isComplete = true
+	override fun onComplete(executor: Executor?, precede: Boolean, reaction: (Result<T>) -> Unit) = apply { reaction(result) }
+}
+
+
+
+
+/* ResultTask */
+
+typealias Reaction<T> = (Result<T>) -> Unit
+
+enum class ResultTaskState { CREATED, INITED, RUNNING, CANCELLED, EXECUTED }
 
 
 abstract class ResultTask<T>: AsyncResult<T> {
@@ -40,6 +55,15 @@ abstract class ResultTask<T>: AsyncResult<T> {
 	@Suppress("LeakingThis") @PublishedApi internal var lock: Any = this
 	
 	inline protected fun <R> synchronize(code: () -> R): R = synchronized(lock) { code() }
+	
+	protected open fun complete(res: Result<T>, cancelled: Boolean = false, interrupt: Boolean = false): Unit {
+		synchronized(lock) {
+			state = EXECUTED
+			result = res
+		}
+		reaction?.let { Safely { it.invoke(res) } }
+	}
+	
 	
 	override fun onComplete(executor: Executor?, precede: Boolean, reaction: Reaction<T>): ResultTask<T> {
 		synchronized(lock) {
@@ -66,10 +90,19 @@ abstract class ResultTask<T>: AsyncResult<T> {
 
 
 
-class FailedAsyncResult<T>(val exception: Throwable): AsyncResult<T> {
-	override val isCancelled = false
-	override val isComplete = true
-	override fun cancel(value: T, interrupt: Boolean) = Unit
-	override fun cancel(cause: Throwable, interrupt: Boolean) = Unit
-	override fun onComplete(executor: Executor?, precede: Boolean, reaction: (Result<T>) -> Unit) = apply { reaction(Result(exception)) }
+
+/* Basic ResultTask implementations */
+
+class ThreadTask<T>(private val code: () -> T): ResultTask<T>() {
+	init {
+		thread { complete(Result { code() }) }
+	}
+}
+
+
+
+class ThreadRTask<T>(private val code: () -> Result<T>): ResultTask<T>() {
+	init {
+		thread { complete(code()) }
+	}
 }

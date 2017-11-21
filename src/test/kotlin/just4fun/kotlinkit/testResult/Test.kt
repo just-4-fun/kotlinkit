@@ -56,6 +56,23 @@ class TestProduction: Spek() { init {
 				shouldEqual(v3, 2)
 			}
 		}
+		on("Nullable type") {
+			val v: String? = null
+			val r = Result(v)
+			it("") {
+				shouldBeTrue(r.isSuccess)
+				shouldBeNull(r.valueOrThrow)
+				shouldBeNull(r.value)
+			}
+		}
+		on("Throwable value") {
+			val v = Exception()
+			val r = Result.Success(v)
+			it("") {
+				shouldBeTrue(r.isSuccess)
+				shouldEqual(r.valueOrThrow, v)
+			}
+		}
 		on("Accessors") {
 			val res0 = Result("ok")
 			val res2 = Result<String>(Exception("oops"))
@@ -69,15 +86,10 @@ class TestProduction: Spek() { init {
 			val v23 = res2.valueOr { "yep" }
 			val v05 = res0.exception
 			val v25 = res2.exception
-			val v07 = res0.ifSuccess { 11 }
-			val v27 = res2.ifSuccess { 11 }
-			val v08 = res0.ifFailure { 11 }
-			val v28 = res2.ifFailure { 11 }
 			var v09 = 0
 			var v29 = 0
 			res0.onSuccess { v09 = 1 }.onFailure { v09 = -1 }
 			res2.onSuccess { v29 = 1 }.onFailure { v29 = -1 }
-			
 			it("") {
 				shouldEqual(v00, "ok")
 				shouldBeNull(v20)
@@ -90,12 +102,40 @@ class TestProduction: Spek() { init {
 				shouldEqual(v23, "yep")
 				shouldBeNull(v05)
 				shouldNotBeNull(v25)
-				shouldEqual(v07, 11)
-				shouldBeNull(v27)
-				shouldBeNull(v08)
-				shouldEqual(v28, 11)
 				shouldEqual(v09, 1)
 				shouldEqual(v29, -1)
+			}
+		}
+		on("Transformers") {
+			var r01 = 0
+			Result { 10 / 0 }
+			  .onFailureOf<ArithmeticException> { r01 += 1 }
+			  .onFailureOf<Exception> { r01 += 1 }
+			  .onFailureOfNot<NullPointerException> { r01 += 1 }
+			  .onFailureOf<NullPointerException> { r01 = -10 }
+			var r02 = 0
+			Result { 10 / 0 }
+			  .wrapFailure { NullPointerException() }
+			  .onFailureOf<NullPointerException> { r02 += 1 }
+			  .onFailureOfNot<ArithmeticException> { r02 += 1 }
+			  .onFailureOf<ArithmeticException> { r02 = -10 }
+			var r03 = Result { 10 / 0 }.ifFailure { 10 }.valueOrThrow
+			var r04 = Result(0).ifSuccess { "ok" }.ifFailure { "oops" }.valueOrThrow
+			var r05 = Result { 10 / 0 }.ifSuccess { "ok" }.ifFailure { "oops" }.valueOrThrow
+			
+			fun Result<Int>.tfm() = fromSuccess { if (it == 0) Result(Oops()) else Result("ok") }.ifFailureOf<Oops> { "oops" }.ifFailureOfNot<Oops> { "wtf" }.valueOrThrow
+			val r06 = Result(0).tfm()
+			val r07 = Result(10).tfm()
+			val r08 = Result { 10 / 0 }.tfm()
+			it("") {
+				shouldEqual(r01, 3)
+				shouldEqual(r02, 2)
+				shouldEqual(r03, 10)
+				shouldEqual(r04, "ok")
+				shouldEqual(r05, "oops")
+				shouldEqual(r06, "oops")
+				shouldEqual(r07, "ok")
+				shouldEqual(r08, "wtf")
 			}
 		}
 		
@@ -105,7 +145,7 @@ class TestProduction: Spek() { init {
 
 
 
-
+class Oops: Exception("Oops.")
 
 
 

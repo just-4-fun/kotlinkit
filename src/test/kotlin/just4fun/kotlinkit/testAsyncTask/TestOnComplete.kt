@@ -1,7 +1,7 @@
 package just4fun.kotlinkit.testAsyncTask
 
 import just4fun.kotlinkit.async.AsyncTask
-import just4fun.kotlinkit.async.DefaultExecutionContext
+import just4fun.kotlinkit.async.DefaultThreadContext
 import just4fun.kotlinkit.log
 
 
@@ -24,7 +24,7 @@ fun main(args: Array<String>) {
 	executor.shutdown(1000)
 }
 
-val executor = DefaultExecutionContext()
+val executor = DefaultThreadContext()
 val default = AsyncTask.sharedContext
 
 fun test1() {

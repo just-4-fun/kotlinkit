@@ -12,13 +12,13 @@ import kotlin.coroutines.experimental.intrinsics.createCoroutineUnchecked
 /* interface */
 
 interface SuspensionExecutor {
-	fun <R, T> executeSuspension(receiver: R, context: CoroutineContext? = null, code: suspend R.() -> T): AsyncResult<T> = SuspendTask<T>().start(receiver, context, code)
+	fun <R, T> suspension(receiver: R, context: CoroutineContext? = null, code: suspend R.() -> T): AsyncResult<T> = SuspendTask<T>().start(receiver, context, code)
 	
-	suspend fun <R, T> executeSuspended(receiver: R, context: CoroutineContext? = null, code: suspend R.() -> T): Result<T> = SuspendTask<T>().startSuspended(receiver, context, code)
+	fun <T> suspension(context: CoroutineContext? = null, code: suspend TaskContext.() -> T): AsyncResult<T> = SuspendTask<T>().start(context, code)
 	
-	fun <T> executeSuspension(context: CoroutineContext? = null, code: suspend TaskContext.() -> T): AsyncResult<T> = SuspendTask<T>().start(context, code)
+	suspend fun <R, T> suspended(receiver: R, context: CoroutineContext? = null, code: suspend R.() -> T): Result<T> = SuspendTask<T>().startSuspended(receiver, context, code)
 	
-	suspend fun <T> executeSuspended(context: CoroutineContext? = null, code: suspend TaskContext.() -> T): Result<T> = SuspendTask<T>().startSuspended(context, code)
+	suspend fun <T> suspended(context: CoroutineContext? = null, code: suspend TaskContext.() -> T): Result<T> = SuspendTask<T>().startSuspended(context, code)
 }
 
 
@@ -27,6 +27,19 @@ interface SuspensionExecutor {
 // TODO leaks interceptor thread to child and parent. But lacks the custom executor to redirect resumption.
 
 open class SuspendTask<T>: ResultTask<T>(), Continuation<T> {
+	
+	companion object {
+		fun <R, T> async(receiver: R, context: CoroutineContext? = null, code: suspend R.() -> T): AsyncResult<T> = SuspendTask<T>().start(receiver, context, code)
+		
+		fun <T> async(context: CoroutineContext? = null, code: suspend TaskContext.() -> T): AsyncResult<T> = SuspendTask<T>().start(context, code)
+		
+		suspend operator fun <R, T> invoke(receiver: R, context: CoroutineContext? = null, code: suspend R.() -> T): Result<T> = SuspendTask<T>().startSuspended(receiver, context, code)
+		
+		suspend operator fun <T> invoke(context: CoroutineContext? = null, code: suspend TaskContext.() -> T): Result<T> = SuspendTask<T>().startSuspended(context, code)
+	}
+	
+	/* instance code */
+	
 	internal var parent: SuspendTask<*>? = null
 	internal var child: SuspendTask<*>? = null
 	internal var thread: Thread? = null
@@ -47,11 +60,11 @@ open class SuspendTask<T>: ResultTask<T>(), Continuation<T> {
 		else cont.resume(Result(IllegalStateException("The task can be pre-started once.")))
 	}
 	
-	suspend /*inline*/ fun <S: SuspendTask<T>> preStartSuspended(context: CoroutineContext?, /*crossinline*/ code: (self: S) -> Unit): Result<T> = suspendCoroutine { cont ->
+	suspend /*inline*/ fun <S: SuspendTask<T>> preStartSuspended(context: CoroutineContext?, /*crossinline*/ config: (self: S) -> Unit): Result<T> = suspendCoroutine { cont ->
 		val option = synchronized(lock) {
 			if (state == CREATED) if (init(context, cont)) 0 else 1 else 2
 		}
-		if (option == 0) Safely({ code(this as S) }, { cancel() })
+		if (option == 0) Safely({ config(this as S) }, { cancel() })
 		else if (option == 1) cancel()
 		else cont.resume(Result(IllegalStateException("The task can be pre-started once.")))
 	}
@@ -120,7 +133,8 @@ open class SuspendTask<T>: ResultTask<T>(), Continuation<T> {
 	final override fun resume(value: T) = complete(Result(value), false, false)
 	final override fun resumeWithException(exception: Throwable) = complete(Result(exception), false, false)
 	
-	private fun complete(res: Result<T>, cancelled: Boolean, interrupt: Boolean) {
+	override final fun complete(res: Result<T>, cancelled: Boolean, interrupt: Boolean) {
+		val prevState = state
 		synchronized(lock) {
 			// even if task was cancelled, if it wasn't intercepted to other thread it should be tracked here to detect actual resume
 			if (state == RUNNING && (parent == null || !parent!!.isComplete)) {
@@ -149,6 +163,7 @@ open class SuspendTask<T>: ResultTask<T>(), Continuation<T> {
 	private fun setParent(): Boolean {
 		return if (active === this) true
 		else if (Thread.currentThread() == active.thread) {
+			active.child = this
 			parent = active
 			//			log(this, "▶  parent [$active]${if (active.isComplete) "  parent complete" else ""}")
 			!active.isComplete

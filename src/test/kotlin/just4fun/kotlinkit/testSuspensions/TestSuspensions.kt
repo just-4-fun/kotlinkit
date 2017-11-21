@@ -6,6 +6,7 @@ import just4fun.kotlinkit.async.SuspendTask
 import just4fun.kotlinkit.async.TaskContext
 import just4fun.kotlinkit.startTime
 import just4fun.kotlinkit.N
+import just4fun.kotlinkit.async.DefaultThreadContext
 import just4fun.kotlinkit.logL
 import java.util.concurrent.Executor
 import java.util.concurrent.Executors
@@ -16,10 +17,10 @@ import kotlin.coroutines.experimental.*
 
 
 fun main(args: Array<String>) {
-//	test2()
+	test2()
 //	test3()
 //	test4()
-	test5()
+//	test5()
 //	testInterceptor()
 }
 
@@ -38,13 +39,18 @@ fun test2() {
 		//							infoIds.set(0)
 		N = 0
 		val executor = Executors.newFixedThreadPool(10)
-		startTime = System.currentTimeMillis()
-		suspended2(executor, cancel0, cancel1, cancel2, par0, par1, par2, true)
-		executor.awaitTermination(1000, TimeUnit.MILLISECONDS)
+		var next = false
+		thread {
+			startTime = System.currentTimeMillis()
+			suspended2(executor, cancel0, cancel1, cancel2, par0, par1, par2, true)
+			  .onComplete {
+				  next = true
+			  }
+		}
+		while (!next) Thread.sleep(100)
+		executor.awaitTermination(100, TimeUnit.MILLISECONDS)
 		executor.shutdown()
-		executor.awaitTermination(1200, TimeUnit.MILLISECONDS)
 	}
-	//	executor.run { awaitTermination(3, TimeUnit.SECONDS); shutdown() }
 }
 
 fun test3() {
@@ -55,12 +61,18 @@ fun test3() {
 		println("-------------------    $cancel0,  $cancel1,  $cancel2,  $cancel3,  $cancel4,        $par0,  $par1,  $par2,  $par3,  $par4   ---------------------")
 		//							infoIds.set(0)
 		N = 0
+		var next = false
 		val executor = Executors.newFixedThreadPool(10)
-		startTime = System.currentTimeMillis()
-		suspended3(executor, cancel0, cancel1, cancel2, cancel3, cancel4, par0, par1, par2, par3, par4)
-		executor.awaitTermination(1400, TimeUnit.MILLISECONDS)
+		thread {
+			startTime = System.currentTimeMillis()
+			suspended3(executor, cancel0, cancel1, cancel2, cancel3, cancel4, par0, par1, par2, par3, par4)
+			  .onComplete {
+				  next = true
+			  }
+		}
+		while (!next) Thread.sleep(100)
+		executor.awaitTermination(100, TimeUnit.MILLISECONDS)
 		executor.shutdown()
-		executor.awaitTermination(1600, TimeUnit.MILLISECONDS)
 	}
 }
 
@@ -139,8 +151,10 @@ fun test5() {
 
 fun suspended1(): AsyncResult<Int> = executeSuspension(-1) { logL(1, " 0", "0"); 1 }
 
-fun suspended2(executor: Executor, cancel0: Long = -1, cancel1: Int = 0, cancel2: Int = 0, par0: Int = 0, par1: Int = 0, par2: Int = 0, iterrupt:Boolean = false): Unit {
-	val icpr = TestInterceptor(executor); val icpr1 = icpr; val icpr2 = icpr
+fun suspended2(executor: Executor, cancel0: Long = -1, cancel1: Int = 0, cancel2: Int = 0, par0: Int = 0, par1: Int = 0, par2: Int = 0, iterrupt: Boolean = false): AsyncResult<*> {
+	val icpr = TestInterceptor(executor);
+	val icpr1 = icpr;
+	val icpr2 = icpr
 //	val icpr = TestInterceptor(executor); val icpr1 = TestInterceptor(executor); val icpr2 = icpr1
 //	val icpr = TestInterceptor(executor); val icpr1 = TestInterceptor(executor); val icpr2 = TestInterceptor(executor)
 	val op = executeSuspension(cancel0, if (par0 > 0) icpr else null, iterrupt) {
@@ -171,10 +185,15 @@ fun suspended2(executor: Executor, cancel0: Long = -1, cancel1: Int = 0, cancel2
 		else if (cancel0 < 0 && cancel1 > 0 && cancel2 > 0 && res.value != 0) logL(1, "Exception -----------------------------------------------------------------------", "Result should be 0  VS   ${res.value}")
 		else if (cancel0 < 0 && cancel1 == 0 && cancel2 == 0 && res.value != 2) logL(1, "Exception -----------------------------------------------------------------------", "Result should be 2  VS   ${res.value}")
 	}
+	return op
 }
 
-fun suspended3(executor: Executor, cancel0: Long = -1, cancel1: Int = 0, cancel2: Int = 0, cancel3: Int = 0, cancel4: Int = 0, par0: Int = 0, par1: Int = 0, par2: Int = 0, par3: Int = 0, par4: Int = 0, iterrupt:Boolean = false) {
-		val icpr = TestInterceptor(executor); val icpr1 = icpr; val icpr2 = icpr; val icpr3 = icpr; val icpr4 = icpr
+fun suspended3(executor: Executor, cancel0: Long = -1, cancel1: Int = 0, cancel2: Int = 0, cancel3: Int = 0, cancel4: Int = 0, par0: Int = 0, par1: Int = 0, par2: Int = 0, par3: Int = 0, par4: Int = 0, iterrupt: Boolean = false): AsyncResult<*> {
+	val icpr = TestInterceptor(executor);
+	val icpr1 = icpr;
+	val icpr2 = icpr;
+	val icpr3 = icpr;
+	val icpr4 = icpr
 //		val icpr = TestInterceptor(executor); val icpr1 = TestInterceptor(executor); val icpr2 = TestInterceptor(executor); val icpr3 = TestInterceptor(executor); val icpr4 = TestInterceptor(executor)
 	val op = executeSuspension(cancel0, if (par0 > 0) icpr else null, iterrupt) {
 		logL(1, " 0 ", ">")
@@ -213,10 +232,13 @@ fun suspended3(executor: Executor, cancel0: Long = -1, cancel1: Int = 0, cancel2
 		else if (cancel2 == 0 && cancel3 == 0 && res.value != 3) logL(1, "Exception -----------------------------------------------------------------------", "Result should be 3  VS   ${res.value}")
 		else if (((cancel2 > 0 && cancel3 == 0) || (cancel2 == 0 && cancel3 > 0)) && res.value != 2) logL(1, "Exception -----------------------------------------------------------------------", "Result should be 2  VS   ${res.value}")
 	}
+	return op
 }
 
-fun suspended4(executor: Executor, throw0: Int = 0, throw1: Int = 0, throw2: Int = 0, par0: Int = 0, par1: Int = 0, par2: Int = 0, iterrupt:Boolean = false): Unit {
-	val icpr = TestInterceptor(executor); val icpr1 = icpr; val icpr2 = icpr
+fun suspended4(executor: Executor, throw0: Int = 0, throw1: Int = 0, throw2: Int = 0, par0: Int = 0, par1: Int = 0, par2: Int = 0, iterrupt: Boolean = false): AsyncResult<*> {
+	val icpr = TestInterceptor(executor);
+	val icpr1 = icpr;
+	val icpr2 = icpr
 	//		val icpr = TestInterceptor(executor); val icpr1 = TestInterceptor(executor); val icpr2 = TestInterceptor(executor)
 	val op = executeSuspension(-1, if (par0 > 0) icpr else null, iterrupt) {
 		logL(1, " 0 ", ">")
@@ -239,6 +261,7 @@ fun suspended4(executor: Executor, throw0: Int = 0, throw1: Int = 0, throw2: Int
 	op.onComplete { res ->
 		logL(1, " 0 ", "X: Result= $res")
 	}
+	return op
 }
 
 fun suspended5() {

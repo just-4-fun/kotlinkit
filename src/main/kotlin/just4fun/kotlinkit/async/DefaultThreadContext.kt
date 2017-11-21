@@ -1,136 +1,106 @@
-package just4fun.kotlinkit.testScheduler
+package just4fun.kotlinkit.async
 
-import just4fun.kotlinkit.async.AsyncTask
-import just4fun.kotlinkit.async.ExecutorInfo
-import just4fun.kotlinkit.async.ResultTask
-import just4fun.kotlinkit.async.TaskContext
+import just4fun.kotlinkit.async.ThreadContextState.*
 import just4fun.kotlinkit.Safely
-import java.util.concurrent.*
-import java.lang.System.currentTimeMillis as now
-import  just4fun.kotlinkit.testScheduler.SchedulerState.*
 import java.util.*
-import kotlin.concurrent.thread
+import java.util.concurrent.RejectedExecutionException
+
+enum class ThreadContextState { RESUMED, PAUSED, SHUTDOWN, TERMINATED; }
 
 
-/* SCHEDULER */
-
-// TODO test after device sleep
-interface RestfulScheduler: Executor {
-	val isPaused: Boolean
-	val isTerminated: Boolean
+open class DefaultThreadContext(var pauseDelayMs: Int = 0): ThreadContext() {
+	private var state = RESUMED
+	private val tasks = FutureQueue()
+	private val lock = tasks
+	private var thread = kotlin.concurrent.thread { loop() }
+	private var pauseTask: AsyncTask<*>? = null
+	val status: ThreadContextState get() = state
 	
-	// TODO if task is complete copy/reset it and return
-	fun <T> schedule(task: AsyncTask<T>): AsyncTask<T>
-	
-	fun <T> schedule(delay: Int, executor: Executor? = null, code: TaskContext.() -> T): ResultTask<T> {
-		return schedule(AsyncTask(delay, executor, code))
+	override fun execute(command: Runnable) {
+		if (state >= SHUTDOWN) throw RejectedExecutionException("Executor has been shutdown")
+		AsyncTask(0, this) { command.run() }
 	}
 	
-	fun cancel(task: ResultTask<*>): Unit
-	fun pause(): Unit
-	fun resume(): Unit
-	/**Cancels any task which [AsyncTask.runTime] >= [timeout] and shuts down. [timeout] = 0 removes all tasks. Can be called more than once to cancell more tasks.*/
-	fun shutdown(timeout: Int = 0): Unit
-}
-
-
-
-
-
-
-
-/* DEFAULT SCHEDULER */
-
-internal enum class SchedulerState {ACTIVE, PAUSED, SHUTDOWN, TERMINATED; }
-
-
-class DefaultScheduler(val executor: ThreadPoolExecutor): RestfulScheduler {
-	private var state: SchedulerState = ACTIVE
-	private val tasks = FutureTaskQueue()
-	private val lock = tasks
-	private var thread = thread { loop() }
-	val queueSize get() = synchronized(lock) { tasks.size() }
-	override val isPaused get() = synchronized(lock) { state >= PAUSED }
-	override val isTerminated get() = synchronized(lock) { state == TERMINATED }
-	private var execInfo: ExecutorInfo? = null
-	
-	override fun execute(command: Runnable) = executor.execute(command)
-	
-	override fun <T> schedule(task: AsyncTask<T>): AsyncTask<T> = synchronized(lock) {
-		if (state != ACTIVE) return task.apply { cancel(RejectedExecutionException("Scheduler is inactive"), false) }
+	override fun schedule(task: AsyncTask<*>) = synchronized(lock) {
+		if (state >= SHUTDOWN) {
+			task.cancel(RejectedExecutionException("Executor has been shutdown"))
+			return
+		} else if (state == PAUSED) resume()
 		tasks.add(task)
 		if (tasks.head() === task) (lock as java.lang.Object).notify()
-		return task
 	}
 	
-	override fun cancel(task: ResultTask<*>) = if (task !is AsyncTask) {
-		throw IllegalArgumentException("${javaClass.simpleName} can't cancel instance of ${task::class.simpleName} class.")
-	} else {
-		synchronized(lock) {
-			val head = tasks.head()
-			tasks.remove(task)
-			if (head !== tasks.head()) (lock as java.lang.Object).notify()
-		}
-		task.cancel(interrupt = true)
+	override fun remove(task: AsyncTask<*>) = synchronized(lock) {
+		if (state >= SHUTDOWN || !task.isCancelled) return
+		val head = tasks.head()
+		tasks.remove(task)
+		if (head !== tasks.head()) (lock as java.lang.Object).notify()
 	}
 	
-	override fun pause() = synchronized(lock) {
-		if (state == ACTIVE) {
-			state = PAUSED
-			execInfo = ExecutorInfo().pauseExecutor(executor)
-		}
-	}
-	
-	override fun resume() = synchronized(lock) {
+	fun resume() = synchronized(lock) {
 		if (state != PAUSED) return
-		state = ACTIVE
-		execInfo = execInfo?.resumeExecutor(executor)
+		state = RESUMED
 		thread = Thread(Runnable { loop() })
 		(lock as java.lang.Object).notify()
 		thread.start()
 	}
 	
-	override fun shutdown(timeout: Int) {
+	fun pause() = synchronized(lock) {
+		if (state == RESUMED) {
+			state = PAUSED
+			(lock as java.lang.Object).notify()
+		}
+	}
+	
+	/**Cancels any task which [AsyncTask.runTime] >= [await] and shuts down. [await] = 0 removes all tasks. Can be called more than once to cancell more tasks.*/
+	override fun shutdown(await: Int) {
 		val list = synchronized(lock) {
 			if (state == TERMINATED) return
 			else {
 				state = SHUTDOWN
-				val deadline = now() + timeout
+				val deadline = System.currentTimeMillis() + await
 				val list = mutableListOf<AsyncTask<*>>()
 				tasks.removeAfter(deadline) { list += it }
 				(lock as java.lang.Object).notify()
 				list
 			}
 		}
-		val cause = CancellationException("Scheduler has been shutdown.")
+		val cause = RejectedExecutionException("Scheduler has been shutdown.")
 		list.forEach { it.cancel(cause, true) }
 		synchronized(lock) { if (tasks.isEmpty()) onShutdown() }
 	}
 	
 	private fun loop() {
 		fun suspend(delay: Long) {
-			//			println(" Wait::  $delay ")// TODO just for test
+			//			Thread.interrupted()// make no much sence as returns back soon
 			Safely { (lock as Object).wait(delay) }
 		}
 		//
-		while (Thread.currentThread() == thread && (state == ACTIVE || tasks.nonEmpty())) {
+		while (Thread.currentThread() == thread && (state == RESUMED || tasks.nonEmpty())) {
 			var task: AsyncTask<*>? = null
 			synchronized(lock) {
-				val now = now()
+				val now = System.currentTimeMillis()
 				val head = tasks.head()
 				when {
-					head == null -> if (!isPaused) suspend(0)
+					head == null -> if (state == RESUMED) suspend(0)
 					head.runTime > now -> suspend(head.runTime - now)
 					else -> task = tasks.remove()
 				}
 			}
-			task?.let {
-//				if (it.executor == null) it.executor = executor
-				it.run()// safe enough  to call w.o. try
+			task?.run() // !!! should be outside sync block;  safe enough  to call w.o. try
+			// auto pause
+			if (pauseDelayMs > 0 && task != null) {
+				synchronized(lock) {
+					val isPause = if (task === pauseTask) run { pauseTask = null; true } else false
+					if (tasks.isEmpty()) {
+						if (isPause) pause()
+						else pauseTask = AsyncTask(pauseDelayMs, this) {}
+					}
+				}
 			}
 		}
 		synchronized(lock) { if (state == SHUTDOWN && Thread.currentThread() == thread) onShutdown() }
-//		println("Exited loop by ${Thread.currentThread().name}:  ${if (Thread.currentThread() != thread) "Dumped" else if (isTerminated) "Terminated" else "Stopped"}")// TODO just for test
+		//		println("Exited loop by ${Thread.currentThread().name}:  ${if (Thread.currentThread() != thread) "Dumped" else if (isTerminated) "Terminated" else "Stopped"}")// TODO just for test
 	}
 	
 	private fun onShutdown(): Unit = synchronized(lock) {
@@ -138,13 +108,9 @@ class DefaultScheduler(val executor: ThreadPoolExecutor): RestfulScheduler {
 		state = TERMINATED
 		//		if (tasks.nonEmpty()) System.err.println("Exception TASKS NON EMPTY:  ${tasks.size}")// TODO just for test
 		if (tasks.nonEmpty()) tasks.removeAfter(0) { it.cancel(interrupt = true) }// shouldn't happen
-		executor.shutdownNow()?.forEach { (it as? AsyncTask<*>)?.cancel(interrupt = true) }
 	}
 	
-	//	fun dump() = tasks.toArray().map { it.hashCode() }.joinToString(", ")
 }
-
-
 
 
 

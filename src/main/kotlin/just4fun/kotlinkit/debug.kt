@@ -68,12 +68,12 @@ fun <T> measureTime(tag: String = "", times: Int = 1, warmup: Boolean = true, an
 		t += t1
 		prevTime = t1
 		count--
+		totalNs += t1
+		totalN++
+		if (maxN < t1) maxN = t1
+		if (minN > t1) minN = t1
 	} while (count > 0)
 	println("$tag ::  $times times;  ${t / 1000000} ms;  $t ns;  ${t / times} ns/call")
-	totalNs += t
-	totalN++
-	if (maxN < t1) maxN = t1
-	if (minN > t1) minN = t1
 	return result
 }
 

@@ -10,12 +10,11 @@ import java.util.concurrent.TimeUnit
 import java.lang.System.currentTimeMillis as now
 
 /**
- WARN: [AsyncTask.sharedContext] needs to be shutdown on application exit..
  */
 open class AsyncTask<T>(val delayMs: Int = 0, val executor: Executor? = null, val code: TaskContext.() -> T): ResultTask<T>(), Runnable, Comparable<AsyncTask<*>> {
 	
 	companion object {
-		var sharedContext: ExecutionContext by lazyVar { DefaultExecutionContext().apply { owner = this } }
+		var sharedContext: ThreadContext by lazyVar { DefaultThreadContext(1000) }
 		private var SEQ = 0L
 		private val nextSeqId get() = SEQ++
 	}
@@ -34,9 +33,9 @@ open class AsyncTask<T>(val delayMs: Int = 0, val executor: Executor? = null, va
 	
 	private fun schedule() = executor.let {
 		when (it) {
-			is ExecutionContext -> run { runNow = true; it.onSchedule(this) }
+			is ThreadContext -> run { runNow = true; it.schedule(this) }
 			is ScheduledThreadPoolExecutor -> run { runNow = true; it.schedule(this, delayMs.toLong(), TimeUnit.MILLISECONDS) }
-			else -> sharedContext.onSchedule(this)
+			else -> sharedContext.schedule(this)
 		}
 	}
 	
@@ -48,7 +47,7 @@ open class AsyncTask<T>(val delayMs: Int = 0, val executor: Executor? = null, va
 		synchronized(lock) { if (state > CREATED) return else state = INITED }
 		try {
 			runNow = true
-			executor!!.execute(this)
+			executor?.execute(this)
 		} catch (x: Throwable) {
 			complete(Result<T>(x), false, false)
 		}
@@ -67,7 +66,7 @@ open class AsyncTask<T>(val delayMs: Int = 0, val executor: Executor? = null, va
 		Thread.interrupted()// clears interrupted status if any
 	}
 	
-	private fun complete(res: Result<T>, cancelled: Boolean, interrupt: Boolean): Unit {
+	override final fun complete(res: Result<T>, cancelled: Boolean, interrupt: Boolean): Unit {
 		synchronized(lock) {
 			if (state > RUNNING) return
 			val remove = cancelled && state == CREATED
@@ -76,14 +75,14 @@ open class AsyncTask<T>(val delayMs: Int = 0, val executor: Executor? = null, va
 			if (interrupt) thread?.interrupt()
 			if (remove) onRemove()
 		}
-		if (reaction != null) Safely { reaction!!.invoke(res) }
+		reaction?.let { Safely { it.invoke(res) } }
 	}
 	
 	fun onRemove() = executor.let {
 		when (it) {
-			is ExecutionContext -> it.onRemove(this)
+			is ThreadContext -> it.remove(this)
 			is ScheduledThreadPoolExecutor -> it.remove(this)
-			else -> sharedContext.onRemove(this)
+			else -> sharedContext.remove(this)
 		}
 	}
 	
