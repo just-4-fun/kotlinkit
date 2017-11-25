@@ -7,7 +7,7 @@ import java.util.concurrent.RejectedExecutionException
 
 enum class ThreadContextState { RESUMED, PAUSED, SHUTDOWN, TERMINATED; }
 
-
+/** Single-threaded implementation of the [ThreadContext] */
 open class DefaultThreadContext(var pauseDelayMs: Int = 0): ThreadContext() {
 	private var state = RESUMED
 	private val tasks = FutureQueue()

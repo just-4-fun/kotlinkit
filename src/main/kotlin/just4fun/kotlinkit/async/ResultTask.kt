@@ -12,20 +12,33 @@ import kotlin.concurrent.thread
 
 /* AsyncResult */
 
+/** Provides information about whether the task in which execution takes place is cancelled. */
 interface TaskContext {
+	/** Provides information about whether the task in which execution takes place is cancelled. */
 	val isCancelled: Boolean
 }
 
-
+/** The [Result] which may not be curently available but can be obtained on completion of some async execution via the [onComplete] callback.
+ */
 interface AsyncResult<T>: TaskContext {
+	/** Checks if the result is ready. */
 	val isComplete: Boolean
+	
+	/** Receives the result as soon as it's ready and handles it via the [reaction]. There can be more than one reaction which form the cueue.
+	 * The [executor] defines which thread the [reaction] will run in. If `null`, the [reaction] runs in the task execution thread.
+	 * [precede] places the [reaction] on the top of the chain of reactions.
+	 */
 	fun onComplete(executor: Executor? = null, precede: Boolean = false, reaction: (Result<T>) -> Unit): AsyncResult<T>
+	
+	/** Cancels the current task with the [cause] */
 	fun cancel(cause: Throwable = CancellationException(), interrupt: Boolean = false) = Unit
+	
+	/** Cancels the current task with the [value] */
 	fun cancel(value: T, interrupt: Boolean = false) = Unit
 }
 
 
-
+/** Creates complete [AsyncResult] with the [result] */
 class ReadyAsyncResult<T>(private val result: Result<T>): AsyncResult<T> {
 	override val isCancelled = false
 	override val isComplete = true
@@ -42,6 +55,7 @@ typealias Reaction<T> = (Result<T>) -> Unit
 enum class ResultTaskState { CREATED, INITED, RUNNING, CANCELLED, EXECUTED }
 
 
+/** [AsyncResult] with implemented [onComplete] method */
 abstract class ResultTask<T>: AsyncResult<T> {
 	var state: ResultTaskState = ResultTaskState.CREATED
 		protected set(value) = run { field = value }
@@ -93,6 +107,7 @@ abstract class ResultTask<T>: AsyncResult<T> {
 
 /* Basic ResultTask implementations */
 
+/** [AsyncResult] of the [code] execution that runs in separate thread. */
 class ThreadTask<T>(private val code: () -> T): ResultTask<T>() {
 	init {
 		thread { complete(Result { code() }) }
@@ -101,6 +116,7 @@ class ThreadTask<T>(private val code: () -> T): ResultTask<T>() {
 
 
 
+/** [AsyncResult] of the [code] execution that runs in separate thread. */
 class ThreadRTask<T>(private val code: () -> Result<T>): ResultTask<T>() {
 	init {
 		thread { complete(code()) }

@@ -9,7 +9,9 @@ import java.util.concurrent.ScheduledThreadPoolExecutor
 import java.util.concurrent.TimeUnit
 import java.lang.System.currentTimeMillis as now
 
-/**
+/** [AsyncResult] of the [code] execution.
+ * Can be delayed by [delayMs] milliseconds.
+ * Can run in the [executor] thread if one is specified. Otherwise runs in the [AsyncTask.sharedContext].
  */
 open class AsyncTask<T>(val delayMs: Int = 0, val executor: Executor? = null, val code: TaskContext.() -> T): ResultTask<T>(), Runnable, Comparable<AsyncTask<*>> {
 	

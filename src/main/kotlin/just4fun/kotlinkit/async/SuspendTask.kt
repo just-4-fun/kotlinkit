@@ -24,10 +24,11 @@ interface SuspensionExecutor {
 
 
 
-// TODO leaks interceptor thread to child and parent. But lacks the custom executor to redirect resumption.
-
+/** [AsyncResult] of suspended execution. What is executed and how is specified by calling the subsequent `..start..` methods of the object. */
 open class SuspendTask<T>: ResultTask<T>(), Continuation<T> {
+// TODO leaks interceptor thread to child and parent. But lacks the custom executor to redirect resumption.
 	
+	/** Contains the convenient [SuspendTask] constructor methods. */
 	companion object {
 		fun <R, T> async(receiver: R, context: CoroutineContext? = null, code: suspend R.() -> T): AsyncResult<T> = SuspendTask<T>().start(receiver, context, code)
 		
@@ -51,6 +52,7 @@ open class SuspendTask<T>: ResultTask<T>(), Continuation<T> {
 		set(value) = run { activeTask!!.active = value }
 		get() = activeTask!!.active
 	
+	/** Initialies task. Continues execution when [start] method is called. */
 	suspend fun preStartSuspended(context: CoroutineContext?): Result<T> = suspendCoroutine { cont ->
 		val option = synchronized(lock) {
 			if (state == CREATED) if (init(context, cont)) 0 else 1 else 2
@@ -60,6 +62,7 @@ open class SuspendTask<T>: ResultTask<T>(), Continuation<T> {
 		else cont.resume(Result(IllegalStateException("The task can be pre-started once.")))
 	}
 	
+	/** Initialies task. Continues execution when [start] method is called. This task can be preconfigured before the exceution is started.*/
 	suspend /*inline*/ fun <S: SuspendTask<T>> preStartSuspended(context: CoroutineContext?, /*crossinline*/ config: (self: S) -> Unit): Result<T> = suspendCoroutine { cont ->
 		val option = synchronized(lock) {
 			if (state == CREATED) if (init(context, cont)) 0 else 1 else 2
@@ -69,8 +72,10 @@ open class SuspendTask<T>: ResultTask<T>(), Continuation<T> {
 		else cont.resume(Result(IllegalStateException("The task can be pre-started once.")))
 	}
 	
+	/** Returns the [Result] of the [code] execution. */
 	suspend fun startSuspended(context: CoroutineContext?, code: suspend TaskContext.() -> T): Result<T> = startSuspended(this, context, code)
 	
+	/** Returns the [Result] of the [code] execution. */
 	suspend fun <R> startSuspended(receiver: R, context: CoroutineContext?, code: suspend R.() -> T): Result<T> {
 		return suspendCoroutine { cont ->
 			val option = synchronized(lock) {
@@ -82,8 +87,10 @@ open class SuspendTask<T>: ResultTask<T>(), Continuation<T> {
 		}
 	}
 	
+	/** Returns the [AsyncResult] of the [code] execution. */
 	fun start(context: CoroutineContext?, code: suspend TaskContext.() -> T) = start(this, context, code)
 	
+	/** Returns the [AsyncResult] of the [code] execution. */
 	fun <R> start(receiver: R, context: CoroutineContext?, code: suspend R.() -> T): SuspendTask<T> {
 		val option = synchronized(lock) {
 			if (state == CREATED) init(context, null) else state == INITED

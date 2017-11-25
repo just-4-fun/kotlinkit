@@ -1,5 +1,6 @@
 package just4fun.kotlinkit
 
+/** Contains `try-catch like` inline methods with more convenient syntax */
 
 object Safely {
 	var stackSizeLimit = 6

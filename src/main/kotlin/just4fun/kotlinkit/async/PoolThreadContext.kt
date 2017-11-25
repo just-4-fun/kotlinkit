@@ -5,7 +5,7 @@ import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
 
 
-
+/** Configurable [ThreadContext] backed by [ScheduledThreadPoolExecutor]  */
 open class PoolThreadContext(protected  val scheduler: ScheduledThreadPoolExecutor): ThreadContext() {
 	override fun execute(command: Runnable) = scheduler.execute(command)
 	
