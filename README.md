@@ -158,7 +158,7 @@ val value = result.valueOr("oops") // = "ok"
 
 Gradle dependency:   
 ```
-compile 'com.github.just-4-fun:kotlinkit:0.2'
+compile 'com.github.just-4-fun:kotlinkit:0.4'
 ```
 
 Maven dependency:  
@@ -166,7 +166,7 @@ Maven dependency:
 <dependency>
   <groupId>com.github.just-4-fun</groupId>
   <artifactId>kotlinkit</artifactId>
-  <version>0.2</version>
+  <version>0.4</version>
   <type>pom</type>
 </dependency>
 ```

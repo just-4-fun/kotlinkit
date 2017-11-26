@@ -37,10 +37,9 @@ internal object ThreadInfo {
 }
 
 
-
 /* PERFORMANCE MERTICS */
 
-fun <T> measureTime(tag: String = "", times: Int = 1, warmup: Boolean = true, antiSurgeRate:Double = .0, code: () -> T): T {
+fun <T> measureTime(tag: String = "", times: Int = 1, warmup: Boolean = true, antiSurgeRate: Double = .0, code: () -> T): T {
 	// warm-up
 	var prevTime = 0L
 	if (warmup) {
@@ -64,7 +63,7 @@ fun <T> measureTime(tag: String = "", times: Int = 1, warmup: Boolean = true, an
 		val t0 = System.nanoTime()
 		result = code()
 		t1 = System.nanoTime() - t0
-		if (antiSurgeRate > 0 && prevTime > 0 && t1 >= prevTime*antiSurgeRate) continue // against extreme surges @ by java class newInstance()
+		if (antiSurgeRate > 0 && prevTime > 0 && t1 >= prevTime * antiSurgeRate) continue // against extreme surges @ by java class newInstance()
 		t += t1
 		prevTime = t1
 		count--
