@@ -28,7 +28,7 @@ The `Result<T>` class represents a result of some method call and provides the c
 	
 	Result { 10 / 0 }.let { (value, exception) -> println("v=$value;  e=$exception") } // v=null; e=ArithmeticException
 ```  
-- Usage  
+- Simple usage  
  ```kotlin
 	val okay = Result { 10 / 10 } // Result(1)
 	val oops = Result { 10 / 0 }  // failed Result with exception: ArithmeticException
@@ -53,8 +53,9 @@ The `Result<T>` class represents a result of some method call and provides the c
 	
 	val b0 = if (okay.isSuccess) 1 else 0 // = 1
 	val b1 = if (oops.isFailure) 1 else 0 // = 1
-	
-	// hooks
+```  
+- Hooks
+ ```kotlin
 	okay.onSuccess { println("success") }.onFailure { println("failure 1") } // prints "success"
 	oops.onSuccess { println("success") }.onFailure { println("failure 2") } // prints "failure 2"
 	
@@ -67,6 +68,8 @@ The `Result<T>` class represents a result of some method call and provides the c
  ```kotlin
 	val w0 = oops.wrapFailure { IllegalStateException() } // exception is IllegalStateException with cause: ArithmeticException
 	
+	/* Value transformation */
+	
 	val t0 = okay.ifFailure { 0 }// Result(2)
 	val t1 = oops.ifFailure { 0 } // Result(0)
 	val t11 = oops.ifFailureOf<ArithmeticException> { 0 } // Result(0)
@@ -75,6 +78,8 @@ The `Result<T>` class represents a result of some method call and provides the c
 	// Chaining
 	val t2 = okay.ifSuccess { "ok" }.ifFailure { "oops" } // Result("ok")
 	val t3 = oops.ifSuccess { "ok" }.ifFailure { "oops" } // Result("oops")
+	
+	/* Result transformation */
 	
 	val t4 = okay.fromSuccess {
 		if (it == 0) Result("ok") else Result(Exception("oops"))
@@ -127,7 +132,7 @@ Usage example:
 AsyncTask(1000) {"ok"}.onComplete { println("v=${it.value};  e=${it.exception}") }
 ```
 
-####SuspendTask
+#### SuspendTask
 
 An `AsyncResult` of suspension code block execution which is performed in a context of the coroutine.  
 - Can specify `CoroutineContext`
