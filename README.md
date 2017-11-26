@@ -102,7 +102,7 @@ The `Result<T>` class represents a result of some method call and provides the c
 
 
 ## AsyncResult
-The `AsyncResult` is an interface designed to represent a `Result` that may not be currently available but can be obtained on completion of some async execution via the`onComplete` callback.  
+The `AsyncResult` is an interface designed to represent a `Result` that may not be currently available but can be obtained on completion of some async execution via the`onComplete` callback.   
 
 The following are implementations:   
 - `AsyncTask`:  asynchronously executes code block ([see description below](#asynctask));
