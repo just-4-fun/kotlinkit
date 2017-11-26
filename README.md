@@ -1,10 +1,10 @@
 # kotlinkit
-Kotlin utilites: Result wrapper, AsyncTask, SuspendTask, etc
+Kotlin utilities: `Result` wrapper, `AsyncResult`, `AsyncTask`, `SuspendTask`, etc
 
 ## Result
 
 The `Result<T>` class represents a result of some method call and provides the caller with a requested value of type `T` or an exception, in case if something's gone awry.     
- Returning a `Result` from a method that can fail replaces the usual approach to throw an exception or return the null in case of an execution failure.  
+ Returning a `Result` from a method that can fail, replaces the usual approach to throw an exception or return the null in case of an execution failure.  
  
  - Construction:  
  ```kotlin
