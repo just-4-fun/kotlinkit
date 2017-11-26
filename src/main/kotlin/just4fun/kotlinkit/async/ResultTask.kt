@@ -18,7 +18,7 @@ interface TaskContext {
 	val isCancelled: Boolean
 }
 
-/** The [Result] which may not be curently available but can be obtained on completion of some async execution via the [onComplete] callback.
+/** The [Result] which may not be currently available but can be obtained on completion of some async execution via the [onComplete] callback.
  */
 interface AsyncResult<T>: TaskContext {
 	/** Checks if the result is ready. */

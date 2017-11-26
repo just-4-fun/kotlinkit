@@ -14,6 +14,7 @@ inline fun <T> Result(code: () -> T): Result<T> = try {
 	Result(x)
 }
 
+
 /** Flattens nested [Result]. */
 @Suppress("UNCHECKED_CAST")
 fun <T> Result<Result<T>>.flatten(): Result<T> = value ?: this as Result<T>
@@ -26,7 +27,7 @@ fun <T> Result<Result<T>>.flatten(): Result<T> = value ?: this as Result<T>
 
 /**
  * The result of some method call provides the caller with a requested [value] if the call is successful or an [exception] if failed.
- * Replaces the usual approach to throw an exception or return the null in case of execution failure.
+ * Replaces the usual approach to throw an exception or return the null in case of an execution failure.
  * Note: [Result.exception] of the successful [Result] is always `null`.
  */
 
@@ -69,16 +70,14 @@ class Result<T> {
 		return this
 	}
 	
-	/** If this is a success returns the successful [Result] of the [code] execution. Returns this otherwise. */
+	/** If this is a success, returns the successful [Result] of the [code] execution. Returns this otherwise. */
 	inline fun <R> ifSuccess(code: (T) -> R): Result<R> {
-		if (success) any = code(any as T)
-		return this as Result<R>
+		return if (success) Result(code(any as T)) else this as Result<R>
 	}
 	
-	/** In case of success returns result of [code] execution. Returns this otherwise. */
+	/** In case of success, returns result of [code] execution. Returns this otherwise. */
 	inline fun <R> fromSuccess(code: (T) -> Result<R>): Result<R> {
-		if (success) return code(any as T)
-		return this as Result<R>
+		return if (success) code(any as T) else this as Result<R>
 	}
 	
 	/** Executes [code] in case of a failure with [exception] as the argument. Returns this. */
@@ -101,31 +100,31 @@ class Result<T> {
 	
 	/** Wraps [exception] into the [Throwable] returned by [code] as its cause. */
 	inline fun wrapFailure(code: (Throwable) -> Throwable): Result<T> {
-		if (!success) (any as Throwable).let { x ->
-			any = code(x).also { if (it.cause == null) it.initCause(x) }
+		return if (success) this else (any as Throwable).let { x ->
+			Result<T>(code(x).also { if (it.cause == null) it.initCause(x) })
 		}
-		return this
 	}
 	
-	/** If this is a failure returns the successful [Result] of the [code] execution. Returns this otherwise. */
+	/** If this is a failure, returns the successful [Result] of the [code] execution. Returns this otherwise. */
 	inline fun ifFailure(code: (Throwable) -> T): Result<T> {
-		if (!success) run { success = true; any = code(any as Throwable) }
-		return this
+		return if (success) this else Result(code(any as Throwable))
 	}
 	
-	/** If this is a failure returns the successful [Result] of the [code] execution. Returns this otherwise. */
+	/** If this is a failure, returns the successful [Result] of the [code] execution. Returns this otherwise. */
 	inline fun <reified F: Throwable> ifFailureOf(code: (F) -> T): Result<T> {
-		if (!success) any?.let { if (it is F)  run { success = true; any = code(it) } }
-		return this
+		return if (success) this else any.let {
+			if (it is F) Result(code(it)) else this
+		}
 	}
 	
-	/** If this is a failure returns the successful [Result] of the [code] execution. Returns this otherwise. */
+	/** If this is a failure, returns the successful [Result] of the [code] execution. Returns this otherwise. */
 	inline fun <reified F: Throwable> ifFailureOfNot(code: (Throwable) -> T): Result<T> {
-		if (!success) any?.let { if (it !is F)  run { success = true; any = code(it as Throwable) } }
-		return this
+		return if (success) this else any.let {
+			if (it !is F) Result(code(it as Throwable)) else this
+		}
 	}
 	
-	/** In case of failure returns result of [code] execution. Returns this otherwise. */
+	/** In case of failure, returns result of [code] execution. Returns this otherwise. */
 	inline fun fromFailure(code: (Throwable) -> Result<T>): Result<T> {
 		if (!success) return code(any as Throwable)
 		return this
