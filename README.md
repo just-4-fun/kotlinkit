@@ -9,18 +9,18 @@ The `Result<T>` class represents a result of some method call and provides the c
  - Construction:  
  ```kotlin
 	// from execution of a code block
-	val result1 = Result { 10 / 10 }
-	val result2 = Result { 10 / 0 }
+	val result1 = Result { 10 / 10 } // Result<Int>(1)
+	val result2 = Result { 10 / 0 }  // Result<Int>(ArithmeticException)
 	
 	// from constructor
 	fun devide(a: Int, b: Int): Result<Int> = if (b != 0) Result(a / b) else Result(ArithmeticException())
-	val result31: Result<Int> = devide(10, 0) // failure with exception: ArithmeticException
-	val result32: Result<Int> = devide(10, 10) // Result(1)
+	val result31: Result<Int> = devide(10, 0) // Result<Int>(ArithmeticException)
+	val result32: Result<Int> = devide(10, 10) // Result<Int>(1)
 	
 	// from companion's functions
-	val result4: Result<String> = Result.Success("ok") // value = "ok"
-	val result7: Result<Int> = Result.Failure(ArithmeticException())  // value is null; exception is ArithmeticException
-	val result5: Result<Exception> = Result.Success(Exception())  // value is Exception
+	val result4: Result<String> = Result.Success("ok") // Result<String>("ok")
+	val result7: Result<Int> = Result.Failure(ArithmeticException())  // Result<Int>(ArithmeticException)
+	val result5: Result<Exception> = Result.Success(Exception())  // successful Result<Exception>(Exception)
 ```  
  - Destructuring:  
  ```kotlin
@@ -30,8 +30,8 @@ The `Result<T>` class represents a result of some method call and provides the c
 ```  
 - Simple usage  
  ```kotlin
-	val okay = Result { 10 / 10 } // Result(1)
-	val oops = Result { 10 / 0 }  // failed Result with exception: ArithmeticException
+	val okay = Result { 10 / 10 } //Result<Int>(1)
+	val oops = Result { 10 / 0 }  // Result<Int>(ArithmeticException)
 	
 	val s0 = okay.value ?: 0 + 1 // = 2
 	val f0 = oops.value ?: 0 + 1 // = 1
@@ -76,6 +76,7 @@ The `Result<T>` class represents a result of some method call and provides the c
 	val t12 = oops.ifFailureOfNot<NullPointerException> { 0 } // Result(0)
 	
 	// Chaining
+	
 	val t2 = okay.ifSuccess { "ok" }.ifFailure { "oops" } // Result("ok")
 	val t3 = oops.ifSuccess { "ok" }.ifFailure { "oops" } // Result("oops")
 	
@@ -84,7 +85,7 @@ The `Result<T>` class represents a result of some method call and provides the c
 	val t4 = okay.fromSuccess {
 		if (it == 0) Result("ok") else Result(Exception("oops"))
 	}
-	// t4 is failed Result<String>
+	// t4 is Result<String>(Exception)
 	
 	val t5 = okay.fromSuccess {
 		if (it == 1) Result("ok") else Result(Exception("oops"))
@@ -92,6 +93,7 @@ The `Result<T>` class represents a result of some method call and provides the c
 	// t5 is Result("ok")
 	
 	// Chaining
+	
 	val t6 = oops.fromSuccess { Result("ok") }.fromFailure {
 		if (it is ArithmeticException) Result("wrong") else Result(Exception("oops"))
 	}
@@ -100,7 +102,7 @@ The `Result<T>` class represents a result of some method call and provides the c
 	val t7 = oops.fromSuccess { Result("ok") }.fromFailure {
 		if (it is ArithmeticException) Result(Exception("oops")) else Result("wrong")
 	}
-	// t6 is failed Result<String>
+	// t6 is Result<String>(Exception)
 ```  
 
 
