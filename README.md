@@ -8,7 +8,7 @@ The `Result<T>` class represents a result of some method call and provides the c
  
  - Construction:  
  ```kotlin
-	//	from execution of a code block
+	// from execution of a code block
 	val result1 = Result { 10 / 10 }
 	val result2 = Result { 10 / 0 }
 	
@@ -40,7 +40,7 @@ The `Result<T>` class represents a result of some method call and provides the c
 // val f1 = oops.valueOrThrow + 1 // throws ArithmeticException
 
 	val s2 = okay.value!! + 1 // = 2
-// val f2 = okay.value!! + 1 // throws NullPointerException
+// val f2 = oops.value!! + 1 // throws NullPointerException
 
 	val s3 = okay.valueOr(0) + 1 // = 2
 	val f3 = oops.valueOr(0) + 1 // = 1
@@ -70,7 +70,7 @@ The `Result<T>` class represents a result of some method call and provides the c
 	
 	/* Value transformation */
 	
-	val t0 = okay.ifFailure { 0 }// Result(2)
+	val t0 = okay.ifFailure { 0 } // Result(2)
 	val t1 = oops.ifFailure { 0 } // Result(0)
 	val t11 = oops.ifFailureOf<ArithmeticException> { 0 } // Result(0)
 	val t12 = oops.ifFailureOfNot<NullPointerException> { 0 } // Result(0)
