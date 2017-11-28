@@ -39,7 +39,7 @@ fun runCommand(cmd: String): Boolean {
 		"a" -> {
 			list.add(if (n2 >= 0) n2 else NEXT++); logL(1, "LIST", list.dump())
 		}
-		"m" -> {
+		"mCall" -> {
 			if (n2 >= 0) list.remove(n2, if (n1 < 0) 0 else n1) else list.remove(); logL(1, "LIST", list.dump())
 		}
 		"c" -> {

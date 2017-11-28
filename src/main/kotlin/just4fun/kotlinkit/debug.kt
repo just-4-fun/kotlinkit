@@ -67,22 +67,28 @@ fun <T> measureTime(tag: String = "", times: Int = 1, warmup: Boolean = true, an
 		t += t1
 		prevTime = t1
 		count--
-		totalNs += t1
-		totalN++
-		if (maxN < t1) maxN = t1
-		if (minN > t1) minN = t1
+		tries += t1
 	} while (count > 0)
 	println("$tag ::  $times times;  ${t / 1000000} ms;  $t ns;  ${t / times} ns/call")
 	return result
 }
 
-private var totalNs = 0L
-private var totalN = 0
-private var maxN = 0L
-private var minN = Long.MAX_VALUE
-
-val measuredTimeAvg get() = if (totalN == 0) 0 else totalNs / totalN
+private val tries = mutableListOf<Long>()
 
 fun measuredStats() {
+	var totalN = 0
+	var totalNs = 0L
+	var maxN = 0L
+	var minN = Long.MAX_VALUE
+	val midN = tries.sum()/tries.size
+	for (t in tries) {
+		if (t > maxN) maxN = t
+		if (t < minN) minN = t
+		if (t > midN*1.5) continue // cut gc surges
+		totalN ++
+		totalNs += t
+	}
+	val measuredTimeAvg = if (totalN == 0) 0 else totalNs / totalN
 	println("calls= $totalN;  min= $minN;  max= $maxN;  avg= $measuredTimeAvg")
+	tries.clear()
 }
