@@ -50,6 +50,12 @@ class Result<T> {
 		return this
 	}
 	
+	inline fun wrapFailure(code: (original: Throwable) -> Throwable): Result<T> {
+		return if (success) this else (any as Throwable).let { x ->
+			Result<T>(code(x).also { if (it.cause == null) it.initCause(x) })
+		}
+	}
+	
 	operator fun component1(): T? = if (success) any as T else null
 	operator fun component2(): Throwable? = if (success) null else any as Throwable
 	

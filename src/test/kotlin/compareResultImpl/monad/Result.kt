@@ -38,7 +38,7 @@ sealed class Result<T> {
 	}
 	
 	inline fun wrapFailure(wrapper: (original: Throwable) -> Throwable): Result<T> =
-	  if (this is Failure) Failure<T>(wrapper(exception).apply { if (cause == null) initCause(exception) }) else this
+	  if (this is Failure) Failure(wrapper(exception).apply { if (cause == null) initCause(exception) }) else this
 	
 	
 	abstract operator fun component1(): T?
