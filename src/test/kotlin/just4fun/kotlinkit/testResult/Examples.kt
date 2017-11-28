@@ -51,23 +51,23 @@ fun main(a: Array<String>) {
 	oops.onFailureOfNot<ArithmeticException> { println("failure 4") } // prints nothing
 	oops.onFailureOf<Exception> { println("failure 5") } // prints "failure 5"
 	oops.onFailureOfNot<NullPointerException> { println("failure 6") } // prints "failure 6"
-	val t0 = okay.ifFailure { 0 }// Result(2)
-	val t1 = oops.ifFailure { 0 } // Result(0)
-	val t11 = oops.ifFailureOf<ArithmeticException> { 0 } // Result(0)
-	val t12 = oops.ifFailureOfNot<NullPointerException> { 0 } // Result(0)
-	val t2 = okay.ifSuccess { "ok" }.ifFailure { "oops" } // Result("ok")
-	val t3 = oops.ifSuccess { "ok" }.ifFailure { "oops" } // Result("oops")
+	val t0 = okay.mapFailure { 0 }// Result(2)
+	val t1 = oops.mapFailure { 0 } // Result(0)
+	val t11 = oops.mapFailureOf<ArithmeticException> { 0 } // Result(0)
+	val t12 = oops.mapFailureOfNot<NullPointerException> { 0 } // Result(0)
+	val t2 = okay.mapSuccess { "ok" }.mapFailure { "oops" } // Result("ok")
+	val t3 = oops.mapSuccess { "ok" }.mapFailure { "oops" } // Result("oops")
 	val w0 = oops.wrapFailure { IllegalStateException() } // exception is IllegalStateException with cause: ArithmeticException
-	val t4 = okay.fromSuccess {
+	val t4 = okay.flatMapSuccess {
 		if (it == 0) Result("ok") else Result(Exception("oops"))
 	}// failure
-	val t5 = okay.fromSuccess {
+	val t5 = okay.flatMapSuccess {
 		if (it == 1) Result("ok") else Result(Exception("oops"))
 	}//  Result("ok")
-	val t6 = oops.fromSuccess { Result("ok") }.fromFailure {
+	val t6 = oops.flatMapSuccess { Result("ok") }.flatMapFailure {
 		if (it is ArithmeticException) Result("wrong") else Result(Exception("oops"))
 	}// Result("wrong")
-	val t7 = oops.fromSuccess { Result("ok") }.fromFailure {
+	val t7 = oops.flatMapSuccess { Result("ok") }.flatMapFailure {
 		if (it is ArithmeticException) Result(Exception("oops")) else Result("wrong")
 	}// failure
 	

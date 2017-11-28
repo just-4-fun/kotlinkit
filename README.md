@@ -70,36 +70,36 @@ The `Result<T>` class represents a result of some method call and provides the c
 	
 	/* Value transformation */
 	
-	val t0 = okay.ifFailure { 0 } // Result(2)
-	val t1 = oops.ifFailure { 0 } // Result(0)
-	val t11 = oops.ifFailureOf<ArithmeticException> { 0 } // Result(0)
-	val t12 = oops.ifFailureOfNot<NullPointerException> { 0 } // Result(0)
+	val t0 = okay.mapFailure { 0 } // Result(1)
+	val t1 = oops.mapFailure { 0 } // Result(0)
+	val t11 = oops.mapFailureOf<ArithmeticException> { 0 } // Result(0)
+	val t12 = oops.mapFailureOfNot<NullPointerException> { 0 } // Result(0)
 	
 	// Chaining
 	
-	val t2 = okay.ifSuccess { "ok" }.ifFailure { "oops" } // Result("ok")
-	val t3 = oops.ifSuccess { "ok" }.ifFailure { "oops" } // Result("oops")
+	val t2 = okay.mapSuccess { "ok" }.mapFailure { "oops" } // Result("ok")
+	val t3 = oops.mapSuccess { "ok" }.mapFailure { "oops" } // Result("oops")
 	
 	/* Result transformation */
 	
-	val t4 = okay.fromSuccess {
+	val t4 = okay.flatMapSuccess {
 		if (it == 0) Result("ok") else Result(Exception("oops"))
 	}
 	// t4 is Result<String>(Exception)
 	
-	val t5 = okay.fromSuccess {
+	val t5 = okay.flatMapSuccess {
 		if (it == 1) Result("ok") else Result(Exception("oops"))
 	}
 	// t5 is Result("ok")
 	
 	// Chaining
 	
-	val t6 = oops.fromSuccess { Result("ok") }.fromFailure {
+	val t6 = oops.flatMapSuccess { Result("ok") }.flatMapFailure {
 		if (it is ArithmeticException) Result("wrong") else Result(Exception("oops"))
 	}
 	// t6 is Result("wrong")
 	
-	val t7 = oops.fromSuccess { Result("ok") }.fromFailure {
+	val t7 = oops.flatMapSuccess { Result("ok") }.flatMapFailure {
 		if (it is ArithmeticException) Result(Exception("oops")) else Result("wrong")
 	}
 	// t6 is Result<String>(Exception)

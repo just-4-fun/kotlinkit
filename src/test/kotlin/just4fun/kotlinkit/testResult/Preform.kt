@@ -32,7 +32,7 @@ val t1
 		vals[4] = v.isSuccess
 		vals[5] = v.isFailure
 		vals[6] = v.exception
-		vals[7] = v.ifSuccess { 2 }
-		vals[8] = v.ifFailure { 3 }
+		vals[7] = v.mapSuccess { 2 }
+		vals[8] = v.mapFailure { 3 }
 	}
 

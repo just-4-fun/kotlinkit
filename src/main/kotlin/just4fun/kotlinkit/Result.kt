@@ -71,12 +71,12 @@ class Result<T> {
 	}
 	
 	/** If this is a success, returns the successful [Result] of the [code] execution. Returns this otherwise. */
-	inline fun <R> ifSuccess(code: (T) -> R): Result<R> {
+	inline fun <R> mapSuccess(code: (T) -> R): Result<R> {
 		return if (success) Result(code(any as T)) else this as Result<R>
 	}
 	
 	/** In case of success, returns result of [code] execution. Returns this otherwise. */
-	inline fun <R> fromSuccess(code: (T) -> Result<R>): Result<R> {
+	inline fun <R> flatMapSuccess(code: (T) -> Result<R>): Result<R> {
 		return if (success) code(any as T) else this as Result<R>
 	}
 	
@@ -106,26 +106,26 @@ class Result<T> {
 	}
 	
 	/** If this is a failure, returns the successful [Result] of the [code] execution. Returns this otherwise. */
-	inline fun ifFailure(code: (Throwable) -> T): Result<T> {
+	inline fun mapFailure(code: (Throwable) -> T): Result<T> {
 		return if (success) this else Result(code(any as Throwable))
 	}
 	
 	/** If this is a failure, returns the successful [Result] of the [code] execution. Returns this otherwise. */
-	inline fun <reified F: Throwable> ifFailureOf(code: (F) -> T): Result<T> {
+	inline fun <reified F: Throwable> mapFailureOf(code: (F) -> T): Result<T> {
 		return if (success) this else any.let {
 			if (it is F) Result(code(it)) else this
 		}
 	}
 	
 	/** If this is a failure, returns the successful [Result] of the [code] execution. Returns this otherwise. */
-	inline fun <reified F: Throwable> ifFailureOfNot(code: (Throwable) -> T): Result<T> {
+	inline fun <reified F: Throwable> mapFailureOfNot(code: (Throwable) -> T): Result<T> {
 		return if (success) this else any.let {
 			if (it !is F) Result(code(it as Throwable)) else this
 		}
 	}
 	
 	/** In case of failure, returns result of [code] execution. Returns this otherwise. */
-	inline fun fromFailure(code: (Throwable) -> Result<T>): Result<T> {
+	inline fun flatMapFailure(code: (Throwable) -> Result<T>): Result<T> {
 		if (!success) return code(any as Throwable)
 		return this
 	}
@@ -237,7 +237,7 @@ class Result<T> {
 //	}
 //
 //	/** If this is failure returns the [Result] of the [code]. Returns this otherwise. */
-//	inline fun ifFailure(code: (Throwable) -> Result<T>): Result<T> {
+//	inline fun mapFailure(code: (Throwable) -> Result<T>): Result<T> {
 //		return if (success) this else code(exception!!)
 //	}
 //
@@ -247,10 +247,10 @@ class Result<T> {
 //	}
 //
 //	/** Returns a result of the execution of [code] with [value] as the argument in case of a success. Otherwise returns 'null'. */
-//	inline fun <R> ifSuccess(code: (T) -> R): R? = if (success) code(value as T) else null
+//	inline fun <R> mapSuccess(code: (T) -> R): R? = if (success) code(value as T) else null
 //
 //	/** Returns a result of the execution of [code] with [exception] as the argument in case of a failure. Otherwise returns 'null'. */
-//	inline fun <R> ifFailure(code: (Throwable) -> R): R? = if (success) null else code(exception!!)
+//	inline fun <R> mapFailure(code: (Throwable) -> R): R? = if (success) null else code(exception!!)
 //
 //	/** Returns [value]. Serves destructuring purpose. */
 //	operator fun component1(): T? = value

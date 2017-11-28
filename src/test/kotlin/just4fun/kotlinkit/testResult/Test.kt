@@ -119,11 +119,11 @@ class TestProduction: Spek() { init {
 			  .onFailureOf<NullPointerException> { r02 += 1 }
 			  .onFailureOfNot<ArithmeticException> { r02 += 1 }
 			  .onFailureOf<ArithmeticException> { r02 = -10 }
-			var r03 = Result { 10 / 0 }.ifFailure { 10 }.valueOrThrow
-			var r04 = Result(0).ifSuccess { "ok" }.ifFailure { "oops" }.valueOrThrow
-			var r05 = Result { 10 / 0 }.ifSuccess { "ok" }.ifFailure { "oops" }.valueOrThrow
+			var r03 = Result { 10 / 0 }.mapFailure { 10 }.valueOrThrow
+			var r04 = Result(0).mapSuccess { "ok" }.mapFailure { "oops" }.valueOrThrow
+			var r05 = Result { 10 / 0 }.mapSuccess { "ok" }.mapFailure { "oops" }.valueOrThrow
 			
-			fun Result<Int>.tfm() = fromSuccess { if (it == 0) Result(Oops()) else Result("ok") }.ifFailureOf<Oops> { "oops" }.ifFailureOfNot<Oops> { "wtf" }.valueOrThrow
+			fun Result<Int>.tfm() = flatMapSuccess { if (it == 0) Result(Oops()) else Result("ok") }.mapFailureOf<Oops> { "oops" }.mapFailureOfNot<Oops> { "wtf" }.valueOrThrow
 			val r06 = Result(0).tfm()
 			val r07 = Result(10).tfm()
 			val r08 = Result { 10 / 0 }.tfm()
