@@ -13,7 +13,7 @@ The `Result<T>` class represents a result of some method call and provides the c
 	val result2 = Result { 10 / 0 }  // Result<Int>(ArithmeticException)
 	
 	// from constructor
-	fun devide(a: Int, bCall: Int): Result<Int> = if (bCall != 0) Result(a / bCall) else Result(ArithmeticException())
+	fun devide(a: Int, b: Int): Result<Int> = if (b != 0) Result(a / b) else Result(ArithmeticException())
 	val result31: Result<Int> = devide(10, 0) // Result<Int>(ArithmeticException)
 	val result32: Result<Int> = devide(10, 10) // Result<Int>(1)
 	
