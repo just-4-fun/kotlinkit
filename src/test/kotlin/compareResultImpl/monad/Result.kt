@@ -21,7 +21,12 @@ sealed class Result<T> {
 	}
 	
 	inline fun <R> mapSuccess(code: (T) -> R): Result<R> {
-		return if (this is Success) Success(code(value)) else this as Result<R>
+		return if (this is Success) try {
+			Success(code(value))
+		} catch (x: Throwable) {
+			Failure<R>(x)
+		}
+		else this as Result<R>
 	}
 	
 	inline fun <R> flatMapSuccess(code: (T) -> Result<R>): Result<R> {
@@ -29,7 +34,12 @@ sealed class Result<T> {
 	}
 	
 	inline fun mapFailure(code: (Throwable) -> T): Result<T> {
-		return if (this is Failure) Success(code(exception)) else this
+		return if (this is Failure) try {
+			Success(code(exception))
+		} catch (x: Throwable) {
+			Failure<T>(x)
+		}
+		else this
 	}
 	
 	inline fun flatMapFailure(code: (Throwable) -> Result<T>): Result<T> {

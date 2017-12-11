@@ -4,7 +4,7 @@ version '0.4.1'
 def projectname = 'kotlinkit'
 
 buildscript {
-    ext.kotlin_version = '1.1.61'
+    ext.kotlin_version = '1.2.0'
 
     repositories {
         jcenter()

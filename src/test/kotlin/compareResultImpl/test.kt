@@ -1,12 +1,13 @@
 package compareResultImpl
 
+import just4fun.kotlinkit.Result
 import compareResultImpl.monad.Result as MResult
 import compareResultImpl.optimized.Result as OResult
 
 
 fun main(a: Array<String>) {
 	/* Uncomment one line at a time */
-	
+
 //	monadHandle() // 1400 ns/call // high surges of gc !!!
 //	optimHandle() // 1100 ns/call
 //	directHandle() // 450 ns/call
@@ -15,7 +16,7 @@ fun main(a: Array<String>) {
 //	optimCreateConstr() // 550 ns/call
 //	monadTransform() // 1150 ns/call
 //	optimTransform() // 1050 ns/call
-	
+
 	measuredStats()
 }
 

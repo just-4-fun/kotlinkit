@@ -72,7 +72,16 @@ class Result<T> {
 	
 	/** If this is a success, returns the successful [Result] of the [code] execution. Returns this otherwise. */
 	inline fun <R> mapSuccess(code: (T) -> R): Result<R> {
-		return if (success) Result(code(any as T)) else this as Result<R>
+		return if (success)  try {
+			Result(code(any as T))
+		} catch (x: Throwable) {
+			Result<R>(x)
+		}
+		else this as Result<R>
+	}
+	
+	inline fun <R> safeMapSuccess(code: (T) -> R): Result<R> {
+		return if (success) Result{code(any as T)} else this as Result<R>
 	}
 	
 	/** In case of success, returns result of [code] execution. Returns this otherwise. */
@@ -107,7 +116,11 @@ class Result<T> {
 	
 	/** If this is a failure, returns the successful [Result] of the [code] execution. Returns this otherwise. */
 	inline fun mapFailure(code: (Throwable) -> T): Result<T> {
-		return if (success) this else Result(code(any as Throwable))
+		return if (success) this else   try {
+			Result(code(any as Throwable))
+		} catch (x: Throwable) {
+			Result<T>(x)
+		}
 	}
 	
 	/** If this is a failure, returns the successful [Result] of the [code] execution. Returns this otherwise. */

@@ -45,7 +45,7 @@ fun measuredStats() {
 	var totalNs = 0L
 	var maxN = 0L
 	var minN = Long.MAX_VALUE
-	val midN = tries.sum()/tries.size
+	val midN = if (tries.isEmpty()) 0 else tries.sum()/tries.size
 	for (t in tries) {
 		if (t > maxN) maxN = t
 		if (t < minN) minN = t
